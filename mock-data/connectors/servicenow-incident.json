@@ -1,0 +1,18 @@
+{
+  "result": {
+    "sys_id": "9d385017c611228701d22104cc380536",
+    "number": "INC0000060",
+    "short_description": "Unable to access email server",
+    "description": "User cannot connect to Exchange server from Outlook client.",
+    "state": "2",
+    "urgency": "1",
+    "impact": "1",
+    "priority": "1",
+    "assigned_to": {
+      "link": "https://instance.service-now.com/api/now/table/sys_user/5137153cc611227c000bbd1bd8cd2005",
+      "value": "5137153cc611227c000bbd1bd8cd2005"
+    },
+    "opened_at": "2023-10-25 10:30:00",
+    "resolved_at": ""
+  }
+}

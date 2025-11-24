@@ -1,0 +1,20 @@
+{
+  "d": {
+    "results": {
+      "SalesOrder": "40000001",
+      "SalesOrderType": "OR",
+      "SalesOrganization": "1710",
+      "DistributionChannel": "10",
+      "OrganizationDivision": "00",
+      "SalesGroup": "",
+      "SalesOffice": "",
+      "SalesDistrict": "",
+      "SoldToParty": "17100001",
+      "CreationDate": "/Date(1634515200000)/",
+      "CreatedByUser": "CB9980000000",
+      "LastChangeDate": "/Date(1634515200000)/",
+      "TotalNetAmount": "1500.00",
+      "TransactionCurrency": "USD"
+    }
+  }
+}

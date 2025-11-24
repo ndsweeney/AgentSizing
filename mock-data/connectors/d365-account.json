@@ -1,0 +1,13 @@
+{
+  "name": "Contoso Ltd.",
+  "accountnumber": "ACT-1001",
+  "emailaddress1": "info@contoso.com",
+  "telephone1": "555-0100",
+  "address1_city": "Redmond",
+  "primarycontactid": {
+    "fullname": "Nancy Anderson",
+    "emailaddress1": "nancy@contoso.com"
+  },
+  "revenue": 12000000,
+  "numberofemployees": 5000
+}

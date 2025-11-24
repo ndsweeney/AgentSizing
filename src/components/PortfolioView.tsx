@@ -1,0 +1,368 @@
+import { useState, useMemo } from 'react';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
+  PieChart, Pie, Cell 
+} from 'recharts';
+import { ArrowLeft, Download, Search, ArrowUpDown, Calendar, Building2, Tag } from 'lucide-react';
+import { useSizingStore } from '../state/sizingStore';
+import { calculateSizingResult, DIMENSIONS } from '../domain/scoring';
+import { downloadJson } from '../utils/export';
+import { cn } from '../utils/cn';
+
+interface PortfolioViewProps {
+  onBack: () => void;
+}
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+
+export function PortfolioView({ onBack }: PortfolioViewProps) {
+  const { scenarios } = useSizingStore();
+  const [filterText, setFilterText] = useState('');
+  const [sortField, setSortField] = useState<'date' | 'size'>('date');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  // Process data for charts and list
+  const processedData = useMemo(() => {
+    return scenarios.map(scenario => {
+      const result = calculateSizingResult(scenario.scores);
+      return {
+        ...scenario,
+        tShirtSize: result.tShirtSize,
+        totalScore: result.totalScore,
+        date: new Date(scenario.lastUpdated).toLocaleDateString(),
+        timestamp: scenario.lastUpdated
+      };
+    });
+  }, [scenarios]);
+
+  // Filter and Sort
+  const filteredScenarios = useMemo(() => {
+    return processedData
+      .filter(s => {
+        const search = filterText.toLowerCase();
+        return (
+          s.name.toLowerCase().includes(search) ||
+          s.customerName?.toLowerCase().includes(search) ||
+          s.industry?.toLowerCase().includes(search) ||
+          s.useCase?.toLowerCase().includes(search)
+        );
+      })
+      .sort((a, b) => {
+        if (sortField === 'date') {
+          return sortDirection === 'asc' ? a.timestamp - b.timestamp : b.timestamp - a.timestamp;
+        } else {
+          // Sort by size (Small < Medium < Large)
+          const sizeOrder = { 'SMALL': 1, 'MEDIUM': 2, 'LARGE': 3 };
+          const diff = sizeOrder[a.tShirtSize] - sizeOrder[b.tShirtSize];
+          return sortDirection === 'asc' ? diff : -diff;
+        }
+      });
+  }, [processedData, filterText, sortField, sortDirection]);
+
+  // Chart Data: Size Distribution
+  const sizeDistribution = useMemo(() => {
+    const counts = { SMALL: 0, MEDIUM: 0, LARGE: 0 };
+    processedData.forEach(s => counts[s.tShirtSize]++);
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  }, [processedData]);
+
+  // Chart Data: Average Score per Dimension
+  const avgScorePerDimension = useMemo(() => {
+    const sums: Record<string, number> = {};
+    const counts: Record<string, number> = {};
+    
+    DIMENSIONS.forEach(d => {
+      sums[d.id] = 0;
+      counts[d.id] = 0;
+    });
+
+    processedData.forEach(s => {
+      Object.entries(s.scores).forEach(([dimId, score]) => {
+        if (score && sums[dimId] !== undefined) {
+          sums[dimId] += score;
+          counts[dimId]++;
+        }
+      });
+    });
+
+    return DIMENSIONS.map(d => ({
+      name: d.label.split(' ')[0], // Short name
+      fullName: d.label,
+      score: counts[d.id] ? Number((sums[d.id] / counts[d.id]).toFixed(1)) : 0
+    }));
+  }, [processedData]);
+
+  // Chart Data: High Scoring Dimensions (Frequency of 3s)
+  const highScoringDimensions = useMemo(() => {
+    const counts: Record<string, number> = {};
+    DIMENSIONS.forEach(d => counts[d.id] = 0);
+
+    processedData.forEach(s => {
+      Object.entries(s.scores).forEach(([dimId, score]) => {
+        if (score === 3 && counts[dimId] !== undefined) {
+          counts[dimId]++;
+        }
+      });
+    });
+
+    return DIMENSIONS
+      .map(d => ({ name: d.label, count: counts[d.id] }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [processedData]);
+
+  // Chart Data: Tag Frequency
+  const tagFrequency = useMemo(() => {
+    const industries: Record<string, number> = {};
+    const useCases: Record<string, number> = {};
+
+    processedData.forEach(s => {
+      if (s.industry) industries[s.industry] = (industries[s.industry] || 0) + 1;
+      if (s.useCase) useCases[s.useCase] = (useCases[s.useCase] || 0) + 1;
+    });
+
+    return {
+      industries: Object.entries(industries).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value),
+      useCases: Object.entries(useCases).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
+    };
+  }, [processedData]);
+
+  const handleExport = () => {
+    const exportData = {
+      summary: {
+        totalScenarios: processedData.length,
+        sizeDistribution,
+        avgScorePerDimension,
+        generatedAt: new Date().toISOString()
+      },
+      scenarios: processedData
+    };
+    downloadJson(exportData, `portfolio-export-${new Date().toISOString().split('T')[0]}.json`);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={onBack}
+              className="p-2 hover:bg-white rounded-full transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6 text-slate-600" />
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">Portfolio Dashboard</h1>
+              <p className="text-slate-600">Analyze {scenarios.length} scenarios across your portfolio</p>
+            </div>
+          </div>
+          <button
+            onClick={handleExport}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-700 font-medium shadow-sm"
+          >
+            <Download className="w-4 h-4" />
+            Export Summary
+          </button>
+        </div>
+
+        {/* Charts Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Size Distribution */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Size Distribution</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={sizeDistribution}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {sizeDistribution.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Average Scores */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Avg. Score by Dimension</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={avgScorePerDimension}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" fontSize={12} />
+                  <YAxis domain={[0, 3]} ticks={[1, 2, 3]} />
+                  <Tooltip />
+                  <Bar dataKey="score" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* High Complexity Drivers */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Top Complexity Drivers (Score 3)</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={highScoringDimensions} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" allowDecimals={false} />
+                  <YAxis dataKey="name" type="category" width={150} fontSize={11} />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#ef4444" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Tag Frequency */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Top Industries</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={tagFrequency.industries.slice(0, 5)} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" allowDecimals={false} />
+                  <YAxis dataKey="name" type="category" width={100} fontSize={12} />
+                  <Tooltip />
+                  <Bar dataKey="value" fill="#10b981" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* Scenarios List */}
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h3 className="text-lg font-semibold text-slate-900">All Scenarios</h3>
+            
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Filter scenarios..."
+                  value={filterText}
+                  onChange={(e) => setFilterText(e.target.value)}
+                  className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              
+              <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
+                <button
+                  onClick={() => {
+                    if (sortField === 'date') {
+                      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortField('date');
+                      setSortDirection('desc');
+                    }
+                  }}
+                  className={cn(
+                    "px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1",
+                    sortField === 'date' ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"
+                  )}
+                >
+                  Date
+                  {sortField === 'date' && <ArrowUpDown className="w-3 h-3" />}
+                </button>
+                <button
+                  onClick={() => {
+                    if (sortField === 'size') {
+                      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+                    } else {
+                      setSortField('size');
+                      setSortDirection('desc');
+                    }
+                  }}
+                  className={cn(
+                    "px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1",
+                    sortField === 'size' ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"
+                  )}
+                >
+                  Size
+                  {sortField === 'size' && <ArrowUpDown className="w-3 h-3" />}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-200">
+                <tr>
+                  <th className="px-6 py-3">Scenario Name</th>
+                  <th className="px-6 py-3">Customer</th>
+                  <th className="px-6 py-3">Industry</th>
+                  <th className="px-6 py-3">Size</th>
+                  <th className="px-6 py-3">Score</th>
+                  <th className="px-6 py-3">Date</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {filteredScenarios.map((scenario) => (
+                  <tr key={scenario.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-slate-900">{scenario.name}</td>
+                    <td className="px-6 py-4 text-slate-600">
+                      {scenario.customerName && (
+                        <div className="flex items-center gap-1.5">
+                          <Building2 className="w-3 h-3" />
+                          {scenario.customerName}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-slate-600">
+                      {scenario.industry && (
+                        <div className="flex items-center gap-1.5">
+                          <Tag className="w-3 h-3" />
+                          {scenario.industry}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={cn(
+                        "px-2 py-1 rounded-full text-xs font-bold",
+                        scenario.tShirtSize === 'SMALL' ? "bg-green-100 text-green-700" :
+                        scenario.tShirtSize === 'MEDIUM' ? "bg-yellow-100 text-yellow-700" :
+                        "bg-red-100 text-red-700"
+                      )}>
+                        {scenario.tShirtSize}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600">{scenario.totalScore}</td>
+                    <td className="px-6 py-4 text-slate-500">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-3 h-3" />
+                        {scenario.date}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filteredScenarios.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
+                      No scenarios found matching your filter.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

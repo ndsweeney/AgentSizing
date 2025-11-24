@@ -1,0 +1,7 @@
+[
+  { "id": "TKT-9001", "customerId": "CUST-001", "subject": "Login Issue", "priority": "High", "status": "Open" },
+  { "id": "TKT-9002", "customerId": "CUST-003", "subject": "Billing Question", "priority": "Medium", "status": "Resolved" },
+  { "id": "TKT-9003", "customerId": "CUST-002", "subject": "Feature Request", "priority": "Low", "status": "In Progress" },
+  { "id": "TKT-9004", "customerId": "CUST-004", "subject": "Security Alert", "priority": "Critical", "status": "Open" },
+  { "id": "TKT-9005", "customerId": "CUST-005", "subject": "Upgrade Request", "priority": "Medium", "status": "Pending" }
+]

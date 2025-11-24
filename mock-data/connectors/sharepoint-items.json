@@ -1,0 +1,38 @@
+{
+  "d": {
+    "results": [
+      {
+        "__metadata": {
+          "id": "Web/Lists(guid'22e9f4c9-3c99-4112-b064-8e2bb2f67242')/Items(1)",
+          "uri": "https://contoso.sharepoint.com/_api/Web/Lists(guid'22e9f4c9-3c99-4112-b064-8e2bb2f67242')/Items(1)",
+          "etag": "\"1\"",
+          "type": "SP.Data.ProjectDocsListItem"
+        },
+        "Id": 1,
+        "Title": "Project Alpha Specs",
+        "Created": "2023-10-01T12:00:00Z",
+        "AuthorId": 12,
+        "EditorId": 12,
+        "OData__UIVersionString": "1.0",
+        "Attachments": false,
+        "GUID": "6b42395e-0885-48a5-8b8a-06509c7d3812"
+      },
+      {
+        "__metadata": {
+          "id": "Web/Lists(guid'22e9f4c9-3c99-4112-b064-8e2bb2f67242')/Items(2)",
+          "uri": "https://contoso.sharepoint.com/_api/Web/Lists(guid'22e9f4c9-3c99-4112-b064-8e2bb2f67242')/Items(2)",
+          "etag": "\"1\"",
+          "type": "SP.Data.ProjectDocsListItem"
+        },
+        "Id": 2,
+        "Title": "Budget Q4",
+        "Created": "2023-10-05T09:30:00Z",
+        "AuthorId": 15,
+        "EditorId": 15,
+        "OData__UIVersionString": "1.0",
+        "Attachments": true,
+        "GUID": "8a12395e-0885-48a5-8b8a-06509c7d3813"
+      }
+    ]
+  }
+}

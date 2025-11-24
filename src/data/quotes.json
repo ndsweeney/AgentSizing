@@ -1,0 +1,7 @@
+[
+  { "id": "QT-5001", "customerId": "CUST-001", "total": 5000.00, "status": "Draft", "createdDate": "2023-10-01" },
+  { "id": "QT-5002", "customerId": "CUST-002", "total": 1250.50, "status": "Sent", "createdDate": "2023-10-05" },
+  { "id": "QT-5003", "customerId": "CUST-001", "total": 10000.00, "status": "Approved", "createdDate": "2023-10-10" },
+  { "id": "QT-5004", "customerId": "CUST-004", "total": 75000.00, "status": "Negotiation", "createdDate": "2023-10-12" },
+  { "id": "QT-5005", "customerId": "CUST-005", "total": 1000000.00, "status": "Draft", "createdDate": "2023-10-15" }
+]

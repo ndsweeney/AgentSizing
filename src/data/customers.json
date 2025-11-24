@@ -1,0 +1,7 @@
+[
+  { "id": "CUST-001", "name": "Acme Corp", "email": "contact@acme.com", "segment": "Enterprise", "status": "Active" },
+  { "id": "CUST-002", "name": "Globex Inc", "email": "info@globex.com", "segment": "SMB", "status": "Active" },
+  { "id": "CUST-003", "name": "Soylent Corp", "email": "sales@soylent.com", "segment": "Enterprise", "status": "Inactive" },
+  { "id": "CUST-004", "name": "Umbrella Corp", "email": "secure@umbrella.com", "segment": "Enterprise", "status": "Active" },
+  { "id": "CUST-005", "name": "Stark Ind", "email": "tony@stark.com", "segment": "Enterprise", "status": "Active" }
+]

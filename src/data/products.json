@@ -1,0 +1,7 @@
+[
+  { "id": "PROD-101", "name": "Widget X", "category": "Hardware", "price": 99.99, "stock": 150 },
+  { "id": "PROD-102", "name": "Service Plan Y", "category": "Service", "price": 29.99, "stock": null },
+  { "id": "PROD-103", "name": "Gadget Z", "category": "Hardware", "price": 149.50, "stock": 45 },
+  { "id": "PROD-104", "name": "Super Widget", "category": "Hardware", "price": 199.99, "stock": 10 },
+  { "id": "PROD-105", "name": "Consulting Hour", "category": "Service", "price": 250.00, "stock": null }
+]
