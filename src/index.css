@@ -1,1 +1,98 @@
 @import "tailwindcss";
+
+@layer utilities {
+  .page-break {
+    page-break-before: always;
+  }
+  
+  .page-break-inside-avoid {
+    page-break-inside: avoid;
+  }
+}
+
+@media print {
+  @page {
+    margin: 20mm;
+    size: auto;
+  }
+
+  /* Hide all UI chrome */
+  nav, .sidebar, .header, button, .no-print, aside {
+    display: none !important;
+  }
+
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+    background: white;
+    margin: 0;
+    padding: 0;
+    overflow: visible !important;
+  }
+
+  #root {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Ensure containers don't limit height */
+  .print-container {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: auto !important;
+    box-shadow: none !important;
+  }
+
+  /* Reset text colors for print */
+  p, h1, h2, h3, h4, h5, h6, li, span, td, th {
+    color: black !important;
+  }
+  
+  /* Keep specific colors where important */
+  .text-blue-600, .text-blue-700, .text-blue-800, .text-blue-900 {
+    color: #2563eb !important; /* blue-600 */
+  }
+  
+  .text-green-600, .text-green-800 {
+    color: #16a34a !important;
+  }
+
+  .text-red-600, .text-red-800 {
+    color: #dc2626 !important;
+  }
+  
+  .bg-blue-50 {
+    background-color: #eff6ff !important;
+  }
+
+  .bg-gray-50 {
+    background-color: #f9fafb !important;
+  }
+
+  /* Diagram handling */
+  .diagram-block, svg {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    max-width: 100% !important;
+  }
+
+  /* Typography */
+  h1, h2, h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* Table handling */
+  tr, td, th {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+}

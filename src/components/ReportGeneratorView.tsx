@@ -1,16 +1,15 @@
 import { useState } from 'react';
-import { FileText, FileJson, Archive, Download, CheckCircle2, AlertCircle } from 'lucide-react';
+import { FileText, FileJson, Archive, Download, CheckCircle2, AlertCircle, Printer } from 'lucide-react';
 import { useActiveScenario } from '../state/sizingStore';
 import { buildReportModel } from '../report/reportBuilder';
 import { renderReportMarkdown } from '../report/renderMarkdown';
 import { renderReportJson } from '../report/renderJson';
 import { exportReportZip } from '../report/exportZip';
-import { renderReportPdf } from '../report/renderPdf';
 
 export function ReportGeneratorView() {
   const { scenario } = useActiveScenario();
   const [isGenerating, setIsGenerating] = useState(false);
-  const [generatingType, setGeneratingType] = useState<'zip' | 'pdf' | null>(null);
+  const [generatingType, setGeneratingType] = useState<'zip' | null>(null);
   
   const report = buildReportModel(scenario.id);
 
@@ -49,6 +48,10 @@ export function ReportGeneratorView() {
     URL.revokeObjectURL(url);
   };
 
+  const handleOpenPrintView = () => {
+    window.open(`?print=true&scenarioId=${scenario.id}`, '_blank');
+  };
+
   const handleDownloadZip = async () => {
     setIsGenerating(true);
     setGeneratingType('zip');
@@ -70,28 +73,6 @@ export function ReportGeneratorView() {
     }
   };
 
-  const handleDownloadPdf = async () => {
-    setIsGenerating(true);
-    setGeneratingType('pdf');
-    try {
-      const blob = await renderReportPdf(report);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `agent-sizing-report-${scenario.name.replace(/\s+/g, '-').toLowerCase()}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Failed to generate PDF', error);
-      alert('PDF generation failed. Please try again or use Markdown/ZIP export.');
-    } finally {
-      setIsGenerating(false);
-      setGeneratingType(null);
-    }
-  };
-
   return (
     <div className="space-y-8">
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -107,64 +88,35 @@ export function ReportGeneratorView() {
           </div>
         </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <button
+            onClick={handleOpenPrintView}
+            className="flex items-center justify-center gap-3 p-6 bg-white border-2 border-blue-100 rounded-xl hover:border-blue-500 hover:shadow-md transition-all group text-left"
+          >
+            <div className="p-3 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+              <Printer className="w-8 h-8 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900">Print / PDF View</h3>
+              <p className="text-sm text-gray-500">Open a print-optimized view to save as PDF</p>
+            </div>
+          </button>
+
+          <button
+            onClick={handleDownloadMarkdown}
+            className="flex items-center justify-center gap-3 p-6 bg-white border-2 border-gray-100 rounded-xl hover:border-gray-500 hover:shadow-md transition-all group text-left"
+          >
+            <div className="p-3 bg-gray-50 rounded-lg group-hover:bg-gray-100 transition-colors">
+              <FileText className="w-8 h-8 text-gray-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900">Markdown Report</h3>
+              <p className="text-sm text-gray-500">Single file documentation</p>
+            </div>
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* PDF Card */}
-          <div className="p-6 bg-gray-50 rounded-xl border border-gray-200 flex flex-col">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-red-100 rounded-lg">
-                <FileText className="w-6 h-6 text-red-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">PDF Report</h3>
-                <p className="text-xs text-gray-500">Print-ready document</p>
-              </div>
-            </div>
-            <p className="text-sm text-gray-600 mb-6 flex-grow">
-              A professionally formatted PDF document suitable for sharing with stakeholders and executives.
-            </p>
-            <button
-              onClick={handleDownloadPdf}
-              disabled={isGenerating}
-              className="w-full py-2 px-4 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 hover:text-gray-900 transition-colors flex items-center justify-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isGenerating && generatingType === 'pdf' ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-gray-600 border-t-transparent rounded-full animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4" />
-                  Download PDF
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Markdown Card */}
-          <div className="p-6 bg-gray-50 rounded-xl border border-gray-200 flex flex-col">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-blue-100 rounded-lg">
-                <FileText className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900">Markdown Report</h3>
-                <p className="text-xs text-gray-500">Single file documentation</p>
-              </div>
-            </div>
-            <p className="text-sm text-gray-600 mb-6 flex-grow">
-              A complete text-based report formatted for easy reading and copy-pasting into documentation tools.
-            </p>
-            <button
-              onClick={handleDownloadMarkdown}
-              disabled={isGenerating}
-              className="w-full py-2 px-4 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 hover:text-gray-900 transition-colors flex items-center justify-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Download className="w-4 h-4" />
-              Download Markdown
-            </button>
-          </div>
-
           {/* JSON Card */}
           <div className="p-6 bg-gray-50 rounded-xl border border-gray-200 flex flex-col">
             <div className="flex items-center gap-3 mb-4">

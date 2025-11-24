@@ -8,8 +8,16 @@ import { PortfolioView } from './components/PortfolioView';
 import { KnowledgeHub } from './components/KnowledgeHub';
 import { decodeScenario } from './utils/share';
 import { CoachModeOverlay } from './components/CoachModeOverlay';
+import { ReportPrintView } from './components/ReportPrintView';
 
 function App() {
+  // Check for print mode immediately
+  const isPrintMode = new URLSearchParams(window.location.search).get('print') === 'true';
+
+  if (isPrintMode) {
+    return <ReportPrintView />;
+  }
+
   const { 
     resetActiveScenario, 
     setCurrentStep, 

@@ -17,6 +17,7 @@ import { calculateRoi, DEFAULT_BENEFIT_ASSUMPTIONS } from '../domain/roi';
 import { generateValueRoadmap } from '../domain/roadmap';
 import { generateDeliveryPlan } from '../domain/delivery';
 import { KNOWLEDGE_BASE } from '../domain/knowledge';
+import { generatePrompts, generateTestPlan, generateStarterPack, generateDebuggerConfig } from '../domain/reportingExtras';
 import type { ReportModel } from './reportModel';
 import type { ConnectorDefinition } from '../domain/connectors';
 
@@ -44,6 +45,9 @@ export function buildReportModel(scenarioId: string): ReportModel | null {
   // Topic Skeletons
   const topicSkeletons = generateTopicSkeletons(sizingResult);
 
+  // Prompts
+  const prompts = generatePrompts(sizingResult);
+
   // Connectors
   const connectors = (scenario.systems || [])
     .map(sys => getConnectorsForSystem(sys))
@@ -68,6 +72,11 @@ export function buildReportModel(scenarioId: string): ReportModel | null {
   // Delivery Plan
   const deliveryPlan = generateDeliveryPlan(sizingResult);
 
+  // Testing & Operate
+  const testPlan = generateTestPlan(sizingResult);
+  const starterPack = generateStarterPack(sizingResult);
+  const debuggerConfig = generateDebuggerConfig(sizingResult);
+
   // Metadata
   const appVersion = '1.0.0';
   const scenarioHash = simpleHash(JSON.stringify(scenario));
@@ -85,6 +94,7 @@ export function buildReportModel(scenarioId: string): ReportModel | null {
     },
     blueprints,
     topicSkeletons,
+    prompts,
     diagrams: {
       agentFlow: l1Diagram,
       systemIntegration: l2Diagram,
@@ -92,11 +102,14 @@ export function buildReportModel(scenarioId: string): ReportModel | null {
     },
     exampleData: datasets, // We could filter this based on industry or use case if we had that mapping
     connectors,
+    starterPack,
     governance: governancePack,
     costs,
     roi,
     valueRoadmap,
     deliveryPlan,
+    testPlan,
+    debuggerConfig,
     knowledgeHub: KNOWLEDGE_BASE,
     generatedAt: new Date().toISOString(),
     appVersion,
