@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import mermaid from 'mermaid';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { cn } from '../utils/cn';
+import { useSizingStore } from '../state/sizingStore';
 
 mermaid.initialize({
   startOnLoad: false,
@@ -22,6 +23,17 @@ export function MermaidDiagram({ code, title, description, className }: MermaidD
   const [svg, setSvg] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const theme = useSizingStore((state) => state.theme);
+
+  useEffect(() => {
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: theme === 'dark' ? 'dark' : 'default',
+      securityLevel: 'loose',
+      fontFamily: 'inherit',
+      darkMode: theme === 'dark',
+    });
+  }, [theme]);
 
   useEffect(() => {
     let mounted = true;
@@ -52,12 +64,14 @@ export function MermaidDiagram({ code, title, description, className }: MermaidD
       }
     };
 
-    renderDiagram();
+    // Small delay to ensure DOM and styles are ready
+    const timeoutId = setTimeout(renderDiagram, 0);
 
     return () => {
       mounted = false;
+      clearTimeout(timeoutId);
     };
-  }, [code]);
+  }, [code, theme]);
 
   return (
     <div className={cn("bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden", className)}>
@@ -68,7 +82,7 @@ export function MermaidDiagram({ code, title, description, className }: MermaidD
         </div>
       )}
       
-      <div className="p-6 overflow-x-auto flex justify-center min-h-[200px] items-center bg-white">
+      <div className="p-6 overflow-x-auto flex justify-center min-h-[200px] items-center bg-white dark:bg-slate-900 transition-colors">
         {loading && (
           <div className="flex flex-col items-center gap-2 text-gray-400 animate-pulse">
             <Loader2 className="w-8 h-8 animate-spin" />
