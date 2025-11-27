@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
   PieChart, Pie, Cell 
 } from 'recharts';
-import { ArrowLeft, Download, Search, ArrowUpDown, Calendar, Building2, Tag } from 'lucide-react';
+import { ArrowLeft, Download, Search, ArrowUpDown, Calendar, Building2, Tag, Users } from 'lucide-react';
 import { useSizingStore } from '../state/sizingStore';
 import { calculateSizingResult, DIMENSIONS } from '../domain/scoring';
 import { downloadJson } from '../utils/export';
@@ -20,6 +20,7 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
   const [filterText, setFilterText] = useState('');
   const [sortField, setSortField] = useState<'date' | 'size'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [groupBy, setGroupBy] = useState<'none' | 'customer'>('none');
 
   // Process data for charts and list
   const processedData = useMemo(() => {
@@ -59,12 +60,33 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
       });
   }, [processedData, filterText, sortField, sortDirection]);
 
+  // Grouping
+  const groupedScenarios = useMemo(() => {
+    if (groupBy === 'none') return { 'All Scenarios': filteredScenarios };
+    
+    const groups: Record<string, typeof filteredScenarios> = {};
+    filteredScenarios.forEach(s => {
+      const key = s.customerName || 'No Customer';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(s);
+    });
+    
+    // Sort groups alphabetically
+    return Object.keys(groups).sort().reduce(
+      (obj, key) => { 
+        obj[key] = groups[key]; 
+        return obj;
+      }, 
+      {} as Record<string, typeof filteredScenarios>
+    );
+  }, [filteredScenarios, groupBy]);
+
   // Chart Data: Size Distribution
   const sizeDistribution = useMemo(() => {
     const counts = { SMALL: 0, MEDIUM: 0, LARGE: 0 };
-    processedData.forEach(s => counts[s.tShirtSize]++);
+    filteredScenarios.forEach(s => counts[s.tShirtSize]++);
     return Object.entries(counts).map(([name, value]) => ({ name, value }));
-  }, [processedData]);
+  }, [filteredScenarios]);
 
   // Chart Data: Average Score per Dimension
   const avgScorePerDimension = useMemo(() => {
@@ -76,7 +98,7 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
       counts[d.id] = 0;
     });
 
-    processedData.forEach(s => {
+    filteredScenarios.forEach(s => {
       Object.entries(s.scores).forEach(([dimId, score]) => {
         if (score && sums[dimId] !== undefined) {
           sums[dimId] += score;
@@ -90,14 +112,14 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
       fullName: d.label,
       score: counts[d.id] ? Number((sums[d.id] / counts[d.id]).toFixed(1)) : 0
     }));
-  }, [processedData]);
+  }, [filteredScenarios]);
 
   // Chart Data: High Scoring Dimensions (Frequency of 3s)
   const highScoringDimensions = useMemo(() => {
     const counts: Record<string, number> = {};
     DIMENSIONS.forEach(d => counts[d.id] = 0);
 
-    processedData.forEach(s => {
+    filteredScenarios.forEach(s => {
       Object.entries(s.scores).forEach(([dimId, score]) => {
         if (score === 3 && counts[dimId] !== undefined) {
           counts[dimId]++;
@@ -109,14 +131,14 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
       .map(d => ({ name: d.label, count: counts[d.id] }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 5);
-  }, [processedData]);
+  }, [filteredScenarios]);
 
   // Chart Data: Tag Frequency
   const tagFrequency = useMemo(() => {
     const industries: Record<string, number> = {};
     const useCases: Record<string, number> = {};
 
-    processedData.forEach(s => {
+    filteredScenarios.forEach(s => {
       if (s.industry) industries[s.industry] = (industries[s.industry] || 0) + 1;
       if (s.useCase) useCases[s.useCase] = (useCases[s.useCase] || 0) + 1;
     });
@@ -125,7 +147,20 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
       industries: Object.entries(industries).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value),
       useCases: Object.entries(useCases).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
     };
-  }, [processedData]);
+  }, [filteredScenarios]);
+
+  // Chart Data: Scenarios by Customer
+  const scenariosByCustomer = useMemo(() => {
+    const counts: Record<string, number> = {};
+    filteredScenarios.forEach(s => {
+      const customer = s.customerName || 'Unknown';
+      counts[customer] = (counts[customer] || 0) + 1;
+    });
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+  }, [filteredScenarios]);
 
   const handleExport = () => {
     const exportData = {
@@ -170,27 +205,42 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Size Distribution */}
           <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 transition-colors">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Size Distribution</h3>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">
+              {groupBy === 'customer' ? 'Scenarios by Customer' : 'Size Distribution'}
+            </h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={sizeDistribution}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {sizeDistribution.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
+                {groupBy === 'customer' ? (
+                  <BarChart data={scenariosByCustomer} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.2} />
+                    <XAxis type="number" allowDecimals={false} stroke="#94a3b8" />
+                    <YAxis dataKey="name" type="category" width={100} fontSize={12} stroke="#94a3b8" />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: 'var(--color-slate-800)', borderColor: 'var(--color-slate-700)', color: '#fff' }}
+                      itemStyle={{ color: '#fff' }}
+                    />
+                    <Bar dataKey="value" fill="#8884d8" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                ) : (
+                  <PieChart>
+                    <Pie
+                      data={sizeDistribution}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {sizeDistribution.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                )}
               </ResponsiveContainer>
             </div>
           </div>
@@ -272,6 +322,18 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
               
               <div className="flex items-center gap-2 border-l border-slate-200 dark:border-slate-700 pl-4">
                 <button
+                  onClick={() => setGroupBy(prev => prev === 'none' ? 'customer' : 'none')}
+                  className={cn(
+                    "px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1",
+                    groupBy === 'customer' 
+                      ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" 
+                      : "text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700"
+                  )}
+                >
+                  <Users className="w-3 h-3" />
+                  Group by Customer
+                </button>
+                <button
                   onClick={() => {
                     if (sortField === 'date') {
                       setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
@@ -314,72 +376,85 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 font-medium border-b border-slate-200 dark:border-slate-700">
-                <tr>
-                  <th className="px-6 py-3">Scenario Name</th>
-                  <th className="px-6 py-3">Customer</th>
-                  <th className="px-6 py-3">Industry</th>
-                  <th className="px-6 py-3">Size</th>
-                  <th className="px-6 py-3">Score</th>
-                  <th className="px-6 py-3">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                {filteredScenarios.map((scenario) => (
-                  <tr 
-                    key={scenario.id} 
-                    className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
-                    onClick={() => {
-                      setActiveScenario(scenario.id);
-                      setView('results');
-                    }}
-                  >
-                    <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{scenario.name}</td>
-                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                      {scenario.customerName && (
-                        <div className="flex items-center gap-1.5">
-                          <Building2 className="w-3 h-3" />
-                          {scenario.customerName}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
-                      {scenario.industry && (
-                        <div className="flex items-center gap-1.5">
-                          <Tag className="w-3 h-3" />
-                          {scenario.industry}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className={cn(
-                        "px-2 py-1 rounded-full text-xs font-bold",
-                        scenario.tShirtSize === 'SMALL' ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
-                        scenario.tShirtSize === 'MEDIUM' ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
-                        "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                      )}>
-                        {scenario.tShirtSize}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{scenario.totalScore}</td>
-                    <td className="px-6 py-4 text-slate-500 dark:text-slate-500">
-                      <div className="flex items-center gap-1.5">
-                        <Calendar className="w-3 h-3" />
-                        {scenario.date}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filteredScenarios.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">
-                      No scenarios found matching your filter.
-                    </td>
-                  </tr>
+            {Object.entries(groupedScenarios).map(([groupName, scenarios]) => (
+              <div key={groupName} className={cn("border-b border-slate-100 dark:border-slate-700 last:border-0", groupBy !== 'none' && "mb-4")}>
+                {groupBy !== 'none' && (
+                  <div className="px-6 py-3 bg-slate-50 dark:bg-slate-800/50 font-semibold text-slate-700 dark:text-slate-200 border-y border-slate-200 dark:border-slate-700 flex items-center gap-2">
+                    <Building2 className="w-4 h-4" />
+                    {groupName}
+                    <span className="text-xs font-normal text-slate-500 ml-2">({scenarios.length})</span>
+                  </div>
                 )}
-              </tbody>
-            </table>
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 font-medium border-b border-slate-200 dark:border-slate-700">
+                    <tr>
+                      <th className="px-6 py-3">Scenario Name</th>
+                      {groupBy === 'none' && <th className="px-6 py-3">Customer</th>}
+                      <th className="px-6 py-3">Industry</th>
+                      <th className="px-6 py-3">Size</th>
+                      <th className="px-6 py-3">Score</th>
+                      <th className="px-6 py-3">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                    {scenarios.map((scenario) => (
+                      <tr 
+                        key={scenario.id} 
+                        className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
+                        onClick={() => {
+                          setActiveScenario(scenario.id);
+                          setView('results');
+                        }}
+                      >
+                        <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{scenario.name}</td>
+                        {groupBy === 'none' && (
+                          <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
+                            {scenario.customerName && (
+                              <div className="flex items-center gap-1.5">
+                                <Building2 className="w-3 h-3" />
+                                {scenario.customerName}
+                              </div>
+                            )}
+                          </td>
+                        )}
+                        <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
+                          {scenario.industry && (
+                            <div className="flex items-center gap-1.5">
+                              <Tag className="w-3 h-3" />
+                              {scenario.industry}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={cn(
+                            "px-2 py-1 rounded-full text-xs font-bold",
+                            scenario.tShirtSize === 'SMALL' ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                            scenario.tShirtSize === 'MEDIUM' ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
+                            "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                          )}>
+                            {scenario.tShirtSize}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{scenario.totalScore}</td>
+                        <td className="px-6 py-4 text-slate-500 dark:text-slate-500">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar className="w-3 h-3" />
+                            {scenario.date}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {scenarios.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">
+                          No scenarios found matching your filter.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            ))}
           </div>
         </div>
       </div>
