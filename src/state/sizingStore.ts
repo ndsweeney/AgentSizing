@@ -4,7 +4,7 @@ import { DIMENSIONS, type ScoreValue, type DimensionId, type ScoresRecord } from
 import { type CostAssumptions, DEFAULT_COST_ASSUMPTIONS } from '../domain/costs';
 import { type BenefitAssumptions, DEFAULT_BENEFIT_ASSUMPTIONS } from '../domain/roi';
 import type { IndustryTemplate } from '../templates';
-import type { MaturityLevel } from '../domain/maturity';
+import { type MaturityLevel, MATURITY_DIMENSIONS } from '../domain/maturity';
 
 export type AssessmentMode = 'single' | 'compare';
 export type ViewState = 'intro' | 'wizard' | 'results' | 'portfolio' | 'knowledge';
@@ -62,7 +62,7 @@ export interface SizingState {
   updateBenefitAssumptions: (assumptions: Partial<BenefitAssumptions>) => void;
 
   // Scenario Management
-  createScenario: (name?: string) => void;
+  createScenario: (name?: string, metadata?: Partial<Scenario>) => void;
   createFromTemplate: (template: IndustryTemplate) => void;
   createSimulation: () => void;
   renameScenario: (id: string, name: string) => void;
@@ -73,6 +73,10 @@ export interface SizingState {
   // Sharing
   importScenario: (scenario: Scenario) => void;
   setReadOnly: (readonly: boolean) => void;
+
+  // Theme
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
 }
 
 const createNewScenario = (name: string): Scenario => ({
@@ -105,7 +109,9 @@ export const useSizingStore = create<SizingState>()(
       isReadOnly: false,
       isCoachMode: false,
       currentView: 'intro',
+      theme: 'light',
 
+      toggleTheme: () => set((state) => ({ theme: state.theme === 'light' ? 'dark' : 'light' })),
       setCoachMode: (enabled) => set({ isCoachMode: enabled }),
       setView: (view) => set({ currentView: view }),
 
@@ -147,12 +153,24 @@ export const useSizingStore = create<SizingState>()(
         set((state) => {
           const activeId = state.activeScenarioId;
           if (state.isReadOnly) return {};
+          
           return {
-            scenarios: state.scenarios.map(s =>
-              s.id === activeId
-                ? { ...s, [field]: value, lastUpdated: Date.now() }
-                : s
-            )
+            scenarios: state.scenarios.map(s => {
+              if (s.id === activeId) {
+                const updates: Partial<Scenario> = { 
+                  [field]: value, 
+                  lastUpdated: Date.now() 
+                };
+                
+                // If updating workshop title, also update the scenario name
+                if (field === 'workshopTitle' && value.trim()) {
+                  updates.name = value.trim();
+                }
+                
+                return { ...s, ...updates };
+              }
+              return s;
+            })
           };
         }),
 
@@ -287,7 +305,8 @@ export const useSizingStore = create<SizingState>()(
           const scenario = state.scenarios.find(s => s.id === activeId);
           if (!scenario) return state;
           
-          const nextStep = Math.min(scenario.currentStep + 1, DIMENSIONS.length - 1);
+          const totalSteps = DIMENSIONS.length + MATURITY_DIMENSIONS.length;
+          const nextStep = Math.min(scenario.currentStep + 1, totalSteps - 1);
           return {
             scenarios: state.scenarios.map(s => 
               s.id === activeId 
@@ -313,9 +332,12 @@ export const useSizingStore = create<SizingState>()(
           };
         }),
 
-      createScenario: (name = 'New Scenario') => 
+      createScenario: (name = 'New Scenario', metadata = {}) => 
         set((state) => {
-          const newScenario = createNewScenario(name);
+          const newScenario = {
+            ...createNewScenario(name),
+            ...metadata
+          };
           return {
             scenarios: [...state.scenarios, newScenario],
             activeScenarioId: newScenario.id
@@ -424,6 +446,7 @@ export const useActiveScenario = () => {
     scenario,
     scores: scenario?.scores || {},
     targetScores: scenario?.targetScores || {},
+    maturityScores: scenario?.maturityScores || {},
     mode: scenario?.mode || 'single',
     currentStep: scenario?.currentStep || 0,
   };

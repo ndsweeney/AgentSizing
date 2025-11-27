@@ -60,11 +60,11 @@ export function MermaidDiagram({ code, title, description, className }: MermaidD
   }, [code]);
 
   return (
-    <div className={cn("bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden", className)}>
+    <div className={cn("bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden", className)}>
       {(title || description) && (
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50">
-          {title && <h3 className="font-semibold text-gray-900">{title}</h3>}
-          {description && <p className="text-sm text-gray-500 mt-1">{description}</p>}
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/50">
+          {title && <h3 className="font-semibold text-gray-900 dark:text-white">{title}</h3>}
+          {description && <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{description}</p>}
         </div>
       )}
       

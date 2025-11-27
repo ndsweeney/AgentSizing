@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { AlertTriangle, ArrowLeft, RefreshCw, CheckCircle2, FileText, Layers, Box, Download, Copy, Check, ArrowRight, Users, Clock, ShieldAlert, HardHat, Bot, Plus, X, Code, FileJson, Factory } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, RefreshCw, FileText, Box, Check, ArrowRight, Users, ShieldAlert, HardHat, Bot, Plus, X, Code, FileJson, Factory, Share2, FlaskConical, LogOut } from 'lucide-react';
 import { useHasCompletedAllDimensions, useActiveScenario, useSizingStore } from '../state/sizingStore';
-import { calculateSizingResult, calculateRiskProfile, DIMENSIONS, type ScoreValue, type AgentNecessity, DimensionId } from '../domain/scoring';
+import { calculateSizingResult, calculateRiskProfile, DIMENSIONS, type ScoreValue, DimensionId } from '../domain/scoring';
 import { getRecommendations } from '../domain/rules';
 import { buildSystemIntegrationMermaid } from '../domain/diagrams';
 import { generateAgentSpecs, generateBuildPlan } from '../domain/generators';
-import { downloadJson, generateMarkdown, copyToClipboard } from '../utils/export';
+import { downloadJson } from '../utils/export';
+import { encodeScenario } from '../utils/share';
 import { cn } from '../utils/cn';
 import { MermaidDiagram } from './MermaidDiagram';
 import { AgentDiagramsView } from './AgentDiagramsView';
@@ -27,15 +28,22 @@ import { ComplianceHeatmapView } from './ComplianceHeatmapView';
 import { MaturityAssessmentView } from './MaturityAssessmentView';
 import { ValueRoadmapView } from './ValueRoadmapView';
 import { ReportGeneratorView } from './ReportGeneratorView';
+import { WorkshopIntake } from './WorkshopIntake';
 
-type TabCategory = 'strategy' | 'architecture' | 'build' | 'poc' | 'costs' | 'testing' | 'operate' | 'reporting';
+type TabCategory = 'details' | 'strategy' | 'architecture' | 'build' | 'poc' | 'costs' | 'testing' | 'operate' | 'reporting';
 
 const TABS_BY_CATEGORY: Record<TabCategory, { id: string; label: string }[]> = {
+  details: [
+    { id: 'details-info', label: 'Details' },
+    { id: 'details-notes', label: 'Notes' },
+    { id: 'details-breakdown', label: 'Breakdown' },
+  ],
   strategy: [
     { id: 'maturity', label: 'Org Maturity' },
     { id: 'roadmap', label: 'Value Roadmap' },
     { id: 'compliance', label: 'Compliance Heatmap' },
     { id: 'governance', label: 'Governance' },
+    { id: 'risks', label: 'Risk Controls' },
   ],
   architecture: [
     { id: 'architecture', label: 'System Architecture' },
@@ -75,12 +83,12 @@ interface ResultsViewProps {
 }
 
 export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
-  const [showToast, setShowToast] = useState(false);
+  const [copiedShare, setCopiedShare] = useState(false);
   const [newSystem, setNewSystem] = useState('');
-  const [activeCategory, setActiveCategory] = useState<TabCategory>('strategy');
-  const [activeTab, setActiveTab] = useState<'architecture' | 'integration' | 'governance' | 'copilot' | 'diagrams' | 'data' | 'blueprints' | 'skeletons' | 'prompts' | 'connectors' | 'tests' | 'delivery' | 'costs' | 'starter-pack' | 'debugger' | 'compliance' | 'maturity' | 'roadmap' | 'report' | 'example-architecture'>('maturity');
+  const [activeCategory, setActiveCategory] = useState<TabCategory>('details');
+  const [activeTab, setActiveTab] = useState<'details-info' | 'details-notes' | 'details-breakdown' | 'architecture' | 'integration' | 'governance' | 'copilot' | 'diagrams' | 'data' | 'blueprints' | 'skeletons' | 'prompts' | 'connectors' | 'tests' | 'delivery' | 'costs' | 'starter-pack' | 'debugger' | 'compliance' | 'maturity' | 'roadmap' | 'report' | 'example-architecture' | 'risks'>('details-info');
   const { scores, targetScores, scenario, mode } = useActiveScenario();
-  const { setSystems, updateMetadata, isReadOnly } = useSizingStore();
+  const { setSystems, updateMetadata, isReadOnly, createSimulation, setActiveScenario } = useSizingStore();
   const isComplete = useHasCompletedAllDimensions();
 
   if (scenario.isSimulation) {
@@ -122,31 +130,28 @@ export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
   };
 
   const attributes = [
-    (scores[DimensionId.WorkflowComplexity] || 0) >= 3 && { icon: HardHat, label: 'High Complexity', color: 'text-orange-700 bg-orange-50 border-orange-200' },
-    (scores[DimensionId.DataSensitivity] || 0) >= 3 && { icon: ShieldAlert, label: 'Sensitive Data', color: 'text-red-700 bg-red-50 border-red-200' },
-    (scores[DimensionId.UserReach] || 0) >= 3 && { icon: Users, label: 'High Reach', color: 'text-blue-700 bg-blue-50 border-blue-200' },
-    (scores[DimensionId.SystemsToIntegrate] || 0) >= 3 && { icon: Box, label: 'System Heavy', color: 'text-purple-700 bg-purple-50 border-purple-200' },
-    { 
-      icon: ShieldAlert, 
-      label: `${riskProfile.level} Risk`, 
-      color: riskProfile.level === 'HIGH' ? 'text-red-700 bg-red-50 border-red-200' : 
-             riskProfile.level === 'MEDIUM' ? 'text-orange-700 bg-orange-50 border-orange-200' : 
-             'text-green-700 bg-green-50 border-green-200'
-    }
+    (scores[DimensionId.WorkflowComplexity] || 0) >= 3 && { icon: HardHat, label: 'High Complexity', color: 'text-orange-700 bg-orange-50 border-orange-200 dark:bg-orange-900/30 dark:border-orange-800 dark:text-orange-400' },
+    (scores[DimensionId.DataSensitivity] || 0) >= 3 && { icon: ShieldAlert, label: 'Sensitive Data', color: 'text-red-700 bg-red-50 border-red-200 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400' },
+    (scores[DimensionId.UserReach] || 0) >= 3 && { icon: Users, label: 'High Reach', color: 'text-blue-700 bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400' },
+    (scores[DimensionId.SystemsToIntegrate] || 0) >= 3 && { icon: Box, label: 'System Heavy', color: 'text-purple-700 bg-purple-50 border-purple-200 dark:bg-purple-900/30 dark:border-purple-800 dark:text-purple-400' },
   ].filter(Boolean) as { icon: any, label: string, color: string }[];
+
+  const riskColor = riskProfile.level === 'HIGH' ? 'text-red-700 bg-red-50 border-red-200 dark:bg-red-900/30 dark:border-red-800 dark:text-red-400' : 
+             riskProfile.level === 'MEDIUM' ? 'text-orange-700 bg-orange-50 border-orange-200 dark:bg-orange-900/30 dark:border-orange-800 dark:text-orange-400' : 
+             'text-green-700 bg-green-50 border-green-200 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400';
 
 
   if (!isComplete) {
     return (
-      <div className="max-w-2xl mx-auto mt-12 p-8 bg-yellow-50 rounded-xl border border-yellow-200 text-center">
-        <AlertTriangle className="w-12 h-12 text-yellow-600 mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-yellow-900 mb-2">Assessment Incomplete</h2>
-        <p className="text-yellow-700 mb-6">
+      <div className="max-w-2xl mx-auto mt-12 p-8 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-900/50 text-center">
+        <AlertTriangle className="w-12 h-12 text-yellow-600 dark:text-yellow-500 mx-auto mb-4" />
+        <h2 className="text-xl font-bold text-yellow-900 dark:text-yellow-100 mb-2">Assessment Incomplete</h2>
+        <p className="text-yellow-700 dark:text-yellow-200 mb-6">
           Please answer all questions to see your sizing results.
         </p>
         <button
           onClick={onEdit}
-          className="px-6 py-2 bg-yellow-600 text-white font-medium rounded-lg hover:bg-yellow-700 transition-colors"
+          className="px-6 py-2 bg-yellow-600 dark:bg-yellow-500 text-white font-medium rounded-lg hover:bg-yellow-700 dark:hover:bg-yellow-600 transition-colors"
         >
           Continue Assessment
         </button>
@@ -156,20 +161,13 @@ export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
 
   const getSizeColor = (size: string) => {
     switch (size) {
-      case 'SMALL': return 'text-green-600 bg-green-50 border-green-200';
-      case 'MEDIUM': return 'text-blue-600 bg-blue-50 border-blue-200';
-      case 'LARGE': return 'text-purple-600 bg-purple-50 border-purple-200';
-      default: return 'text-gray-600 bg-gray-50 border-gray-200';
+      case 'SMALL': return 'text-green-600 bg-green-50 border-green-200 dark:bg-green-900/30 dark:border-green-800 dark:text-green-400';
+      case 'MEDIUM': return 'text-blue-600 bg-blue-50 border-blue-200 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-400';
+      case 'LARGE': return 'text-purple-600 bg-purple-50 border-purple-200 dark:bg-purple-900/30 dark:border-purple-800 dark:text-purple-400';
+      default: return 'text-gray-600 bg-gray-50 border-gray-200 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400';
     }
   };
 
-  const getNecessityColor = (necessity: AgentNecessity) => {
-    switch (necessity) {
-      case 'Definitely needed': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'Recommended': return 'bg-green-100 text-green-800 border-green-200';
-      case 'Optional': return 'bg-gray-100 text-gray-600 border-gray-200';
-    }
-  };
 
   const getScoreLabel = (val: ScoreValue | null) => {
     if (val === 1) return 'Small';
@@ -178,37 +176,17 @@ export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
     return '-';
   };
 
-  const handleExportJson = () => {
-    const exportData = {
-      scenarioName: scenario.name,
-      mode,
-      scores,
-      targetScores: mode === 'compare' ? targetScores : undefined,
-      result,
-      targetResult,
-      timestamp: new Date().toISOString(),
-    };
-    downloadJson(exportData, 'agent-sizing-results.json');
+  const handleShare = () => {
+    const encoded = encodeScenario(scenario);
+    const url = new URL(window.location.href);
+    url.searchParams.set('share', encoded);
+    navigator.clipboard.writeText(url.toString());
+    setCopiedShare(true);
+    setTimeout(() => setCopiedShare(false), 2000);
   };
 
   const handleExportBuildPlan = () => {
     downloadJson(buildPlan, 'copilot-build-plan.json');
-  };
-
-  const handleExportMarkdown = async () => {
-    const md = generateMarkdown(
-      result, 
-      scores, 
-      mode === 'compare' ? { targetResult, targetScores } : undefined,
-      scenario.systems,
-      scenario.costAssumptions,
-      scenario.benefitAssumptions
-    );
-    const success = await copyToClipboard(md);
-    if (success) {
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
-    }
   };
 
   const getRoadmapSuggestions = () => {
@@ -262,395 +240,202 @@ export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
   const systemIntegrationDiagram = buildSystemIntegrationMermaid(result, scenario.systems || []);
 
   return (
-    <div className="max-w-4xl mx-auto py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
+    <div className="max-w-full mx-auto py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
       
-      {/* Toast Notification */}
-      {showToast && (
-        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-lg shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
-          <Check className="w-4 h-4 text-green-400" />
-          <span className="text-sm font-medium">Markdown copied to clipboard</span>
-        </div>
-      )}
-
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">{scenario.name}</h2>
-          <p className="text-sm text-gray-500">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{scenario.workshopTitle || scenario.name}</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             {mode === 'compare' ? 'Gap Analysis: Current vs Target' : 'Assessment Results'}
           </p>
         </div>
         <div className="flex gap-3">
           <button
-            onClick={handleExportJson}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            onClick={handleShare}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-sm"
           >
-            <Download className="w-4 h-4" />
-            Export JSON
-          </button>
-          <button
-            onClick={handleExportBuildPlan}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            Export Build Plan
-          </button>
-          <button
-            onClick={handleExportMarkdown}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <Copy className="w-4 h-4" />
-            Copy Markdown Summary
+            {copiedShare ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+            {copiedShare ? 'Link Copied!' : 'Share Results'}
           </button>
         </div>
       </div>
 
       {/* Hero Result Card */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="p-8 text-center border-b border-gray-100 bg-gradient-to-b from-white to-gray-50/50">
-          <h2 className="text-lg font-medium text-gray-500 mb-6">Estimated Deployment Size</h2>
-          
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden transition-colors">
+        <div className="p-8">
           {mode === 'compare' && targetResult ? (
-            <div className="flex items-center justify-center gap-12 mb-8">
+            <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-16">
+              {/* Current State */}
               <div className="text-center">
-                <div className="text-sm text-gray-500 mb-2">Current State</div>
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Current State</div>
                 <div className={cn(
-                  "inline-flex items-center justify-center px-6 py-3 rounded-xl border-2 text-2xl font-bold mb-2",
+                  "w-32 h-32 mx-auto flex items-center justify-center rounded-2xl border-4 text-4xl font-bold shadow-sm mb-4 transition-all",
                   getSizeColor(result.tShirtSize)
                 )}>
                   {result.tShirtSize}
                 </div>
-                <div className="text-sm text-gray-600">
-                  Score: <span className="font-semibold">{result.totalScore}</span>
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  Score: <span className="font-bold text-gray-900 dark:text-white">{result.totalScore}</span>
                 </div>
               </div>
 
-              <div className="flex flex-col items-center text-gray-400">
+              {/* Arrow */}
+              <div className="flex flex-col items-center justify-center text-gray-300 dark:text-gray-600">
                 <ArrowRight className="w-8 h-8" />
-                <span className="text-xs font-medium mt-1">TARGET</span>
+                <span className="text-[10px] font-bold uppercase mt-1 tracking-widest">Target</span>
               </div>
 
+              {/* Target State */}
               <div className="text-center">
-                <div className="text-sm text-gray-500 mb-2">Target State</div>
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Target State</div>
                 <div className={cn(
-                  "inline-flex items-center justify-center px-6 py-3 rounded-xl border-2 text-2xl font-bold mb-2",
+                  "w-32 h-32 mx-auto flex items-center justify-center rounded-2xl border-4 text-4xl font-bold shadow-sm mb-4 transition-all",
                   getSizeColor(targetResult.tShirtSize)
                 )}>
                   {targetResult.tShirtSize}
                 </div>
-                <div className="text-sm text-gray-600">
-                  Score: <span className="font-semibold">{targetResult.totalScore}</span>
+                <div className="text-sm text-gray-600 dark:text-gray-300">
+                  Score: <span className="font-bold text-gray-900 dark:text-white">{targetResult.totalScore}</span>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="mb-6">
-              <div className={cn(
-                "inline-flex items-center justify-center px-10 py-6 rounded-2xl border-2 text-5xl font-bold mb-4 shadow-sm",
-                getSizeColor(result.tShirtSize)
-              )}>
-                {result.tShirtSize}
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col md:flex-row items-start justify-end gap-4">
+                 {attributes.length > 0 && (
+                   <div className="flex flex-wrap justify-center md:justify-end gap-2">
+                     {attributes.map((attr, i) => (
+                       <div key={i} className={cn("flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors", attr.color)}>
+                         <attr.icon className="w-4 h-4" />
+                         {attr.label}
+                       </div>
+                     ))}
+                   </div>
+                 )}
               </div>
-              <p className="text-gray-600">
-                Total Score: <span className="font-semibold text-gray-900">{result.totalScore}</span> / {DIMENSIONS.length * 3}
-              </p>
+
+              <div className="flex flex-col sm:flex-row items-center gap-8 overflow-x-auto pb-4">
+                    <div className={cn(
+                      "w-48 h-36 flex flex-col items-center justify-center rounded-2xl border-4 shadow-sm transition-all flex-shrink-0",
+                      getSizeColor(result.tShirtSize)
+                    )}>
+                      <span className="text-4xl font-bold">{result.tShirtSize}</span>
+                      <span className="text-xs font-medium opacity-80 uppercase tracking-wider mt-1 text-center px-2">Estimated Deployment Size</span>
+                    </div>
+
+                    <div className={cn(
+                      "w-48 h-36 flex flex-col items-center justify-center rounded-2xl border-4 shadow-sm transition-all flex-shrink-0",
+                      riskColor
+                    )}>
+                      <span className="text-4xl font-bold">{riskProfile.level}</span>
+                      <span className="text-sm font-medium opacity-80 uppercase tracking-wider mt-1">Risk</span>
+                    </div>
+
+                    <div className="w-48 h-36 flex flex-col items-center justify-center rounded-2xl border-4 border-gray-100 dark:border-slate-700 shadow-sm transition-all bg-white dark:bg-slate-800 px-4 flex-shrink-0">
+                      <div className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight flex items-baseline gap-2">
+                        {result.totalScore} <span className="text-lg text-gray-400 font-normal">/ {DIMENSIONS.length * 3}</span>
+                      </div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+                        Complexity Score
+                      </p>
+                      
+                      <div className="w-full h-1.5 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div 
+                          className={cn(
+                            "h-full rounded-full transition-all duration-1000 ease-out",
+                            result.totalScore > 20 ? "bg-purple-500" : result.totalScore > 10 ? "bg-blue-500" : "bg-green-500"
+                          )}
+                          style={{ width: `${(result.totalScore / (DIMENSIONS.length * 3)) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={() => {
+                        if (scenario.isSimulation && scenario.originalScenarioId) {
+                          setActiveScenario(scenario.originalScenarioId);
+                        } else {
+                          createSimulation();
+                        }
+                      }}
+                      className="w-48 h-36 flex flex-col items-center justify-center gap-2 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-4 border-purple-200 dark:border-purple-800 rounded-2xl text-lg font-bold hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors shadow-sm flex-shrink-0 sm:ml-auto"
+                    >
+                      {scenario.isSimulation ? (
+                        <>
+                          <LogOut className="w-8 h-8 mb-1" />
+                          Exit Simulation
+                        </>
+                      ) : (
+                        <>
+                          <FlaskConical className="w-8 h-8 mb-1" />
+                          Simulate Changes
+                        </>
+                      )}
+                    </button>
+              </div>
             </div>
           )}
-
-          {/* Attribute Chips */}
-          {attributes.length > 0 && (
-             <div className="flex flex-wrap justify-center gap-2 mt-4">
-               {attributes.map((attr, i) => (
-                 <div key={i} className={cn("flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border", attr.color)}>
-                   <attr.icon className="w-3.5 h-3.5" />
-                   {attr.label}
-                 </div>
-               ))}
-             </div>
-           )}
         </div>
         
-        <div className="bg-gray-50 p-6 grid md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="flex items-center gap-2 font-semibold text-gray-900 mb-3">
-              <Layers className="w-4 h-4 text-blue-600" />
-              Architecture Recommendations
+        {result.notes.length > 0 && (
+          <div className="bg-gray-50 dark:bg-slate-900/50 px-8 py-6 border-t border-gray-100 dark:border-slate-700">
+            <h3 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white mb-4 text-sm uppercase tracking-wide">
+              <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              Key Considerations
             </h3>
-            <ul className="space-y-2">
-              {result.recommendedAgentPattern.map((rec, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
-                  <CheckCircle2 className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                  <span>{rec}</span>
-                </li>
+            <div className="grid md:grid-cols-2 gap-4">
+              {result.notes.map((note, idx) => (
+                <div key={idx} className="flex items-start gap-3 text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-slate-800 p-4 rounded-lg border border-gray-100 dark:border-slate-700 shadow-sm">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
+                  <span className="leading-relaxed">{note}</span>
+                </div>
               ))}
-            </ul>
-          </div>
-          
-          {result.notes.length > 0 && (
-            <div>
-              <h3 className="flex items-center gap-2 font-semibold text-gray-900 mb-3">
-                <FileText className="w-4 h-4 text-blue-600" />
-                Key Considerations
-              </h3>
-              <ul className="space-y-2">
-                {result.notes.map((note, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 flex-shrink-0" />
-                    <span>{note}</span>
-                  </li>
-                ))}
-              </ul>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Roadmap Suggestions (Compare Mode Only) */}
       {mode === 'compare' && roadmap.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-blue-50/50">
-            <h3 className="flex items-center gap-2 font-semibold text-gray-900">
-              <ArrowRight className="w-4 h-4 text-blue-600" />
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden transition-colors">
+          <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-700 bg-blue-50/50 dark:bg-blue-900/20">
+            <h3 className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white">
+              <ArrowRight className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               Transition Roadmap
             </h3>
           </div>
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-gray-100 dark:divide-slate-700">
             {roadmap.map((item, idx) => (
               <div key={idx} className="px-6 py-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-gray-900">{item.dimension}</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{item.dimension}</span>
                   <div className="flex items-center gap-2 text-sm">
-                    <span className="text-gray-500">{getScoreLabel(item.current as ScoreValue)}</span>
-                    <ArrowRight className="w-3 h-3 text-gray-400" />
-                    <span className="font-medium text-blue-600">{getScoreLabel(item.target as ScoreValue)}</span>
+                    <span className="text-gray-500 dark:text-gray-400">{getScoreLabel(item.current as ScoreValue)}</span>
+                    <ArrowRight className="w-3 h-3 text-gray-400 dark:text-gray-500" />
+                    <span className="font-medium text-blue-600 dark:text-blue-400">{getScoreLabel(item.target as ScoreValue)}</span>
                   </div>
                 </div>
-                <p className="text-sm text-gray-600">{item.advice}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">{item.advice}</p>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* Agent Architecture Suggestion */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
-          <h3 className="flex items-center gap-2 font-semibold text-gray-900">
-            <Box className="w-4 h-4 text-blue-600" />
-            Suggested Agent Architecture
-          </h3>
-        </div>
-        <div className="p-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {result.agentArchitecture.map((agent) => (
-            <div key={agent.type} className="p-4 rounded-lg border border-gray-200 bg-gray-50/50 flex flex-col h-full">
-              <div className="flex items-start justify-between mb-2">
-                <h4 className="font-semibold text-gray-900 text-sm">{agent.type}</h4>
-                <span className={cn(
-                  "text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border",
-                  getNecessityColor(agent.necessity)
-                )}>
-                  {agent.necessity === 'Definitely needed' ? 'Required' : agent.necessity}
-                </span>
-              </div>
-              <p className="text-xs text-gray-600 mt-auto leading-relaxed">
-                {agent.reason}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
 
-      {/* Copilot Studio Architecture Panel */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-blue-50">
-          <h3 className="flex items-center gap-2 font-semibold text-blue-900">
-            <Bot className="w-4 h-4 text-blue-600" />
-            Suggested Copilot Studio Architecture
-          </h3>
-        </div>
-        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <ArchitectureCard title="Experience Agents" value={result.copilotArchitecture.experienceAgents} />
-          <ArchitectureCard title="Value Stream Agents" value={result.copilotArchitecture.valueStreamAgents} />
-          <ArchitectureCard title="Function Agents" value={result.copilotArchitecture.functionAgents} />
-          <ArchitectureCard title="Process Agents" value={result.copilotArchitecture.processAgents} />
-          <ArchitectureCard title="Task Agents" value={result.copilotArchitecture.taskAgents} />
-          <ArchitectureCard title="Control Agents" value={result.copilotArchitecture.controlAgents} />
-          <ArchitectureCard title="Foundry Requirement" value={result.copilotArchitecture.foundryRequirement} className="md:col-span-2 lg:col-span-3" />
-        </div>
-      </div>
 
-      {/* Workshop Notes */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
-          <h3 className="flex items-center gap-2 font-semibold text-gray-900">
-            <FileText className="w-4 h-4 text-blue-600" />
-            Workshop Notes
-          </h3>
-        </div>
-        <div className="p-6">
-          <textarea
-            value={scenario.notes || ''}
-            onChange={(e) => updateMetadata('notes', e.target.value)}
-            disabled={isReadOnly}
-            placeholder="Add overall workshop notes, conclusions, or next steps..."
-            className="w-full p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500 min-h-[150px]"
-          />
-        </div>
-      </div>
 
-      {/* Detailed Breakdown */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-100 bg-gray-50">
-          <h3 className="font-semibold text-gray-900">Detailed Breakdown</h3>
-        </div>
-        <div className="divide-y divide-gray-100">
-          {DIMENSIONS.map((dim) => {
-            const val = scores[dim.id];
-            const targetVal = mode === 'compare' ? targetScores[dim.id] : null;
-            
-            return (
-              <div key={dim.id} className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                <div>
-                  <div className="font-medium text-gray-900">{dim.label}</div>
-                  <div className="text-xs text-gray-500">{dim.description}</div>
-                </div>
-                <div className="flex items-center gap-4">
-                  {mode === 'compare' && targetVal !== null ? (
-                    <div className="flex items-center gap-3">
-                      <div className="flex flex-col items-end">
-                        <span className="text-xs text-gray-400 uppercase tracking-wider">Now</span>
-                        <span className={cn(
-                          "px-2 py-0.5 rounded text-xs font-medium border",
-                          val === 1 ? "bg-green-50 text-green-700 border-green-200" :
-                          val === 2 ? "bg-blue-50 text-blue-700 border-blue-200" :
-                          val === 3 ? "bg-purple-50 text-purple-700 border-purple-200" :
-                          "bg-gray-100 text-gray-600 border-gray-200"
-                        )}>
-                          {getScoreLabel(val ?? null)}
-                        </span>
-                      </div>
-                      <ArrowRight className="w-4 h-4 text-gray-300" />
-                      <div className="flex flex-col items-start">
-                        <span className="text-xs text-gray-400 uppercase tracking-wider">Target</span>
-                        <span className={cn(
-                          "px-2 py-0.5 rounded text-xs font-medium border",
-                          targetVal === 1 ? "bg-green-50 text-green-700 border-green-200" :
-                          targetVal === 2 ? "bg-blue-50 text-blue-700 border-blue-200" :
-                          targetVal === 3 ? "bg-purple-50 text-purple-700 border-purple-200" :
-                          "bg-gray-100 text-gray-600 border-gray-200"
-                        )}>
-                          {getScoreLabel(targetVal ?? null)}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <span className={cn(
-                        "px-3 py-1 rounded-full text-xs font-medium border",
-                        val === 1 ? "bg-green-50 text-green-700 border-green-200" :
-                        val === 2 ? "bg-blue-50 text-blue-700 border-blue-200" :
-                        val === 3 ? "bg-purple-50 text-purple-700 border-purple-200" :
-                        "bg-gray-100 text-gray-600 border-gray-200"
-                      )}>
-                        {getScoreLabel(val ?? null)}
-                      </span>
-                      <span className="w-6 text-right font-mono text-gray-400">{val}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
 
-      {/* Strategic Recommendations */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Architecture */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-indigo-50">
-            <h3 className="flex items-center gap-2 font-semibold text-indigo-900">
-              <HardHat className="w-4 h-4 text-indigo-600" />
-              Technical Architecture
-            </h3>
-          </div>
-          <div className="p-6">
-            <ul className="space-y-3">
-              {recommendations.architecture.map((rec, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-1.5 flex-shrink-0" />
-                  <span>{rec}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
 
-        {/* Delivery */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-emerald-50">
-            <h3 className="flex items-center gap-2 font-semibold text-emerald-900">
-              <Clock className="w-4 h-4 text-emerald-600" />
-              Delivery Estimate
-            </h3>
-          </div>
-          <div className="p-6">
-            <ul className="space-y-3">
-              {recommendations.delivery.map((rec, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 flex-shrink-0" />
-                  <span>{rec}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
 
-        {/* Team */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-blue-50">
-            <h3 className="flex items-center gap-2 font-semibold text-blue-900">
-              <Users className="w-4 h-4 text-blue-600" />
-              Recommended Team
-            </h3>
-          </div>
-          <div className="p-6">
-            <ul className="space-y-3">
-              {recommendations.team.map((rec, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 flex-shrink-0" />
-                  <span>{rec}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
 
-        {/* Risks */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-100 bg-amber-50">
-            <h3 className="flex items-center gap-2 font-semibold text-amber-900">
-              <ShieldAlert className="w-4 h-4 text-amber-600" />
-              Risk Controls
-            </h3>
-          </div>
-          <div className="p-6">
-            <ul className="space-y-3">
-              {recommendations.risks.map((rec, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
-                  <span>{rec}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
+
 
       {/* Diagrams Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="border-b border-gray-100 bg-gray-50/50">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden transition-colors">
+        <div className="border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/50">
           {/* Category Navigation */}
-          <div className="px-6 py-4 flex gap-2 overflow-x-auto border-b border-gray-100">
+          <div className="px-6 py-4 flex gap-2 overflow-x-auto border-b border-gray-100 dark:border-slate-700">
             {(Object.keys(TABS_BY_CATEGORY) as TabCategory[]).map((category) => (
               <button
                 key={category}
@@ -661,11 +446,11 @@ export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
                 className={cn(
                   "px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all",
                   activeCategory === category
-                    ? "bg-blue-600 text-white shadow-md"
-                    : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                    ? "bg-blue-600 dark:bg-blue-500 text-white shadow-md"
+                    : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200 dark:bg-slate-800 dark:text-gray-300 dark:hover:bg-slate-700 dark:border-slate-600"
                 )}
               >
-                {category}
+                {category === 'details' ? 'Workshop Details' : category}
               </button>
             ))}
           </div>
@@ -679,8 +464,8 @@ export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
                 className={cn(
                   "px-6 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
                   activeTab === tab.id
-                    ? "border-blue-600 text-blue-600 bg-white"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50"
+                    ? "border-blue-600 text-blue-600 bg-white dark:bg-slate-800 dark:text-blue-400 dark:border-blue-400"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:text-gray-400 dark:hover:text-gray-200 dark:hover:bg-slate-700"
                 )}
               >
                 {tab.label}
@@ -689,23 +474,119 @@ export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
           </div>
         </div>
 
+        {activeTab === 'details-info' && (
+          <div className="p-6">
+            <WorkshopIntake 
+              className="shadow-none border-0 p-0 mb-0 bg-transparent" 
+              hideTitle 
+            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div>
+                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1 block pl-1">Date Created</label>
+                <div className="w-full px-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-md bg-slate-50 text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+                  {new Date(scenario.createdAt).toLocaleDateString()}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'details-notes' && (
+          <div className="p-6">
+            <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">Workshop Notes</label>
+            <textarea
+              value={scenario.notes || ''}
+              onChange={(e) => updateMetadata('notes', e.target.value)}
+              disabled={isReadOnly}
+              placeholder="Add overall workshop notes, conclusions, or next steps..."
+              className="w-full p-4 border border-gray-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500 bg-white dark:bg-slate-900 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 min-h-[300px]"
+            />
+          </div>
+        )}
+
+        {activeTab === 'details-breakdown' && (
+          <div className="p-6">
+            <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">Detailed Breakdown</h4>
+            <div className="divide-y divide-gray-100 dark:divide-slate-700 border-t border-b border-gray-100 dark:border-slate-700">
+              {DIMENSIONS.map((dim) => {
+                const val = scores[dim.id];
+                const targetVal = mode === 'compare' ? targetScores[dim.id] : null;
+                
+                return (
+                  <div key={dim.id} className="py-3 flex items-center justify-between">
+                    <div>
+                      <div className="font-medium text-gray-900 dark:text-white text-sm">{dim.label}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{dim.description}</div>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      {mode === 'compare' && targetVal !== null ? (
+                        <div className="flex items-center gap-3">
+                          <div className="flex flex-col items-end">
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider">Now</span>
+                            <span className={cn(
+                              "px-2 py-0.5 rounded text-xs font-medium border",
+                              val === 1 ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800" :
+                              val === 2 ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800" :
+                              val === 3 ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800" :
+                              "bg-gray-100 text-gray-600 border-gray-200 dark:bg-slate-800 dark:text-gray-400 dark:border-slate-700"
+                            )}>
+                              {getScoreLabel(val ?? null)}
+                            </span>
+                          </div>
+                          <ArrowRight className="w-3 h-3 text-gray-300 dark:text-gray-600" />
+                          <div className="flex flex-col items-start">
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider">Target</span>
+                            <span className={cn(
+                              "px-2 py-0.5 rounded text-xs font-medium border",
+                              targetVal === 1 ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800" :
+                              targetVal === 2 ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800" :
+                              targetVal === 3 ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800" :
+                              "bg-gray-100 text-gray-600 border-gray-200 dark:bg-slate-800 dark:text-gray-400 dark:border-slate-700"
+                            )}>
+                              {getScoreLabel(targetVal ?? null)}
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <span className={cn(
+                            "px-2 py-0.5 rounded text-xs font-medium border",
+                            val === 1 ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800" :
+                            val === 2 ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800" :
+                            val === 3 ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800" :
+                            "bg-gray-100 text-gray-600 border-gray-200 dark:bg-slate-800 dark:text-gray-400 dark:border-slate-700"
+                          )}>
+                            {getScoreLabel(val ?? null)}
+                          </span>
+                          <span className="w-4 text-right font-mono text-gray-400 dark:text-gray-500 text-xs">{val}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {activeTab === 'architecture' && (
           <ArchitectureView 
             result={result} 
             scenarioName={scenario.name}
             industry={scenario.industry}
             systems={scenario.systems || []}
+            recommendations={recommendations.architecture}
           />
         )}
 
         {activeTab === 'integration' && (
           <div>
-            <div className="p-6 border-b border-gray-100 bg-gray-50/30">
+            <div className="p-6 border-b border-gray-100 dark:border-slate-700 bg-gray-50/30 dark:bg-slate-900/30">
               <div className="flex flex-wrap gap-2 mb-4">
                 {(scenario.systems || []).map((sys) => (
-                  <span key={sys} className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm border border-blue-200">
+                  <span key={sys} className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-sm border border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
                     {sys}
-                    <button onClick={() => handleRemoveSystem(sys)} className="hover:text-blue-900">
+                    <button onClick={() => handleRemoveSystem(sys)} className="hover:text-blue-900 dark:hover:text-blue-100">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -718,12 +599,12 @@ export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
                   onChange={(e) => setNewSystem(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Add system (e.g. SAP, Salesforce, SharePoint)..."
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  className="flex-1 px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-blue-500 dark:focus:border-blue-400 outline-none bg-white dark:bg-slate-900 text-gray-900 dark:text-white"
                 />
                 <button
                   onClick={handleAddSystem}
                   disabled={!newSystem.trim()}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   <Plus className="w-4 h-4" />
                   Add
@@ -744,18 +625,18 @@ export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
         )}
 
         {activeTab === 'copilot' && (
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-gray-100 dark:divide-slate-700">
             {/* Industry Optimization Panel */}
             {activeTemplate && (
-              <div className="p-6 bg-indigo-50/50">
+              <div className="p-6 bg-indigo-50/50 dark:bg-indigo-900/20">
                 <div className="flex items-center gap-2 mb-4">
-                  <Factory className="w-5 h-5 text-indigo-600" />
-                  <h3 className="font-semibold text-indigo-900">Optimised Architecture for {activeTemplate.industry}</h3>
+                  <Factory className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                  <h3 className="font-semibold text-indigo-900 dark:text-indigo-100">Optimised Architecture for {activeTemplate.industry}</h3>
                 </div>
-                <p className="text-sm text-indigo-800 mb-4">{activeTemplate.agentMeshSummary}</p>
+                <p className="text-sm text-indigo-800 dark:text-indigo-200 mb-4">{activeTemplate.agentMeshSummary}</p>
                 <div className="flex flex-wrap gap-2">
                   {activeTemplate.recommendedUseCases.map(uc => (
-                    <span key={uc} className="px-2 py-1 bg-white text-indigo-700 text-xs font-medium rounded border border-indigo-100">
+                    <span key={uc} className="px-2 py-1 bg-white text-indigo-700 text-xs font-medium rounded border border-indigo-100 dark:bg-slate-800 dark:text-indigo-300 dark:border-indigo-800">
                       {uc}
                     </span>
                   ))}
@@ -764,14 +645,14 @@ export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
             )}
 
             {/* Build Plan Export */}
-            <div className="p-6 flex items-center justify-between bg-gray-50/30">
+            <div className="p-6 flex items-center justify-between bg-gray-50/30 dark:bg-slate-900/30">
               <div>
-                <h3 className="font-semibold text-gray-900">Implementation Build Plan</h3>
-                <p className="text-sm text-gray-500">Generate Epics and User Stories for your backlog.</p>
+                <h3 className="font-semibold text-gray-900 dark:text-white">Implementation Build Plan</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Generate Epics and User Stories for your backlog.</p>
               </div>
               <button
                 onClick={handleExportBuildPlan}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors dark:bg-slate-800 dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-700"
               >
                 <FileJson className="w-4 h-4" />
                 Export Jira/DevOps JSON
@@ -780,41 +661,41 @@ export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
 
             {/* Agent Specs */}
             <div className="p-6">
-              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <Bot className="w-4 h-4 text-blue-600" />
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <Bot className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 Agent Specifications
               </h3>
               <div className="grid gap-4">
                 {agentSpecs.map((spec, idx) => (
-                  <div key={idx} className="border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-                      <span className="font-medium text-gray-900">{spec.title}</span>
-                      <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded border">{spec.type}</span>
+                  <div key={idx} className="border border-gray-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 dark:bg-slate-900/50 px-4 py-3 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center">
+                      <span className="font-medium text-gray-900 dark:text-white">{spec.title}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 bg-white dark:bg-slate-800 px-2 py-1 rounded border dark:border-slate-600">{spec.type}</span>
                     </div>
                     <div className="p-4 text-sm space-y-3">
-                      <p className="text-gray-600 italic">{spec.purpose}</p>
+                      <p className="text-gray-600 dark:text-gray-400 italic">{spec.purpose}</p>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <span className="font-semibold text-gray-900 text-xs uppercase tracking-wider">Inputs</span>
-                          <ul className="list-disc list-inside text-gray-600 mt-1">
+                          <span className="font-semibold text-gray-900 dark:text-white text-xs uppercase tracking-wider">Inputs</span>
+                          <ul className="list-disc list-inside text-gray-600 dark:text-gray-400 mt-1">
                             {spec.inputs.map((i, k) => <li key={k}>{i}</li>)}
                           </ul>
                         </div>
                         <div>
-                          <span className="font-semibold text-gray-900 text-xs uppercase tracking-wider">Outputs</span>
-                          <ul className="list-disc list-inside text-gray-600 mt-1">
+                          <span className="font-semibold text-gray-900 dark:text-white text-xs uppercase tracking-wider">Outputs</span>
+                          <ul className="list-disc list-inside text-gray-600 dark:text-gray-400 mt-1">
                             {spec.outputs.map((i, k) => <li key={k}>{i}</li>)}
                           </ul>
                         </div>
                       </div>
                       
                       {spec.type === 'Process Agents' && (
-                        <div className="mt-4 pt-4 border-t border-gray-100">
+                        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700">
                           <div className="flex items-center gap-2 mb-2">
-                            <Code className="w-4 h-4 text-purple-600" />
-                            <span className="font-semibold text-purple-900 text-xs uppercase tracking-wider">Topic Skeleton</span>
+                            <Code className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                            <span className="font-semibold text-purple-900 dark:text-purple-100 text-xs uppercase tracking-wider">Topic Skeleton</span>
                           </div>
-                          <p className="text-xs text-gray-500 italic">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 italic">
                             See "Topic Skeletons" tab for detailed implementation guide.
                           </p>
                         </div>
@@ -837,9 +718,9 @@ export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
 
         {activeTab === 'example-architecture' && (
           <div className="p-6">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 text-center">
-              <h3 className="text-lg font-semibold text-blue-900 mb-2">Example Architecture</h3>
-              <p className="text-blue-700">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 text-center dark:bg-blue-900/20 dark:border-blue-800">
+              <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-100 mb-2">Example Architecture</h3>
+              <p className="text-blue-700 dark:text-blue-300">
                 Reference architecture diagrams and patterns for your specific industry and use case will appear here.
               </p>
             </div>
@@ -867,7 +748,11 @@ export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
         )}
 
         {activeTab === 'delivery' && (
-          <DeliveryPlanView result={result} />
+          <DeliveryPlanView 
+            result={result} 
+            deliveryRecommendations={recommendations.delivery}
+            teamRecommendations={recommendations.team}
+          />
         )}
 
         {activeTab === 'costs' && (
@@ -911,12 +796,35 @@ export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
             <ReportGeneratorView />
           </div>
         )}
+
+        {activeTab === 'risks' && (
+          <div className="p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden transition-colors">
+              <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-700 bg-amber-50 dark:bg-amber-900/20">
+                <h3 className="flex items-center gap-2 font-semibold text-amber-900 dark:text-amber-100">
+                  <ShieldAlert className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  Risk Controls
+                </h3>
+              </div>
+              <div className="p-6">
+                <ul className="space-y-3">
+                  {recommendations.risks.map((rec, idx) => (
+                    <li key={idx} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 dark:bg-amber-500 mt-1.5 flex-shrink-0" />
+                      <span>{rec}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+      <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-slate-700">
         <button
           onClick={onRestart}
-          className="flex items-center gap-2 px-6 py-3 text-gray-600 font-medium rounded-lg hover:bg-gray-100 transition-colors"
+          className="flex items-center gap-2 px-6 py-3 text-gray-600 font-medium rounded-lg hover:bg-gray-100 transition-colors dark:text-gray-300 dark:hover:bg-slate-800"
         >
           <RefreshCw className="w-4 h-4" />
           Start Over
@@ -924,21 +832,14 @@ export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
 
         <button
           onClick={onEdit}
-          className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+          className="flex items-center gap-2 px-6 py-3 bg-blue-600 dark:bg-blue-500 text-white font-medium rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-sm"
         >
           <ArrowLeft className="w-4 h-4" />
           Edit Answers
         </button>
       </div>
+
     </div>
   );
 }
 
-function ArchitectureCard({ title, value, className }: { title: string, value: string, className?: string }) {
-  return (
-    <div className={cn("p-4 rounded-lg border border-gray-200 bg-gray-50/50", className)}>
-      <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{title}</h4>
-      <p className="text-sm font-medium text-gray-900">{value}</p>
-    </div>
-  );
-}

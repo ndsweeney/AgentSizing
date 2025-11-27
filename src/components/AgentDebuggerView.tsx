@@ -43,20 +43,20 @@ export function AgentDebuggerView() {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Controls */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <Play className="w-6 h-6 text-blue-600" />
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Play className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               Multi-Agent Debugger
             </h2>
-            <p className="text-gray-500 mt-1">
+            <p className="text-gray-500 dark:text-slate-400 mt-1">
               Simulate execution flows between agents to validate architecture and error handling.
             </p>
           </div>
           
           <div className="flex items-center gap-3">
-            <div className="flex bg-gray-100 p-1 rounded-lg">
+            <div className="flex bg-gray-100 dark:bg-slate-700 p-1 rounded-lg">
               {(['happy-path', 'error-path', 'escalation-path'] as SimulationMode[]).map((m) => (
                 <button
                   key={m}
@@ -64,8 +64,8 @@ export function AgentDebuggerView() {
                   className={cn(
                     "px-3 py-1.5 text-sm font-medium rounded-md transition-all flex items-center gap-2",
                     mode === m 
-                      ? "bg-white text-blue-600 shadow-sm" 
-                      : "text-gray-500 hover:text-gray-700"
+                      ? "bg-white dark:bg-slate-600 text-blue-600 dark:text-blue-400 shadow-sm" 
+                      : "text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200"
                   )}
                 >
                   {m === 'happy-path' && <CheckCircle2 className="w-3 h-3" />}
@@ -88,7 +88,7 @@ export function AgentDebuggerView() {
             {trace && (
               <button
                 onClick={handleExport}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300 font-medium rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
               >
                 <Download className="w-4 h-4" />
                 Export Trace
@@ -101,13 +101,13 @@ export function AgentDebuggerView() {
       {trace && (
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Timeline / Trace Log */}
-          <div className="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-[600px]">
-            <div className="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-gray-500" />
+          <div className="lg:col-span-1 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col h-[600px]">
+            <div className="p-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50 flex justify-between items-center">
+              <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Clock className="w-4 h-4 text-gray-500 dark:text-slate-400" />
                 Execution Timeline
               </h3>
-              <span className="text-xs font-mono text-gray-400">
+              <span className="text-xs font-mono text-gray-400 dark:text-slate-500">
                 {currentStepIndex + 1} / {trace.steps.length}
               </span>
             </div>
@@ -118,30 +118,32 @@ export function AgentDebuggerView() {
                   className={cn(
                     "relative pl-4 border-l-2 transition-all duration-300",
                     idx <= currentStepIndex ? "opacity-100" : "opacity-30",
-                    step.status === 'failure' ? "border-red-500" : "border-blue-200"
+                    step.status === 'failure' ? "border-red-500" : "border-blue-200 dark:border-blue-800"
                   )}
                 >
                   <div className={cn(
-                    "absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full border-2 bg-white",
-                    idx === currentStepIndex ? "border-blue-600 scale-125" : 
-                    step.status === 'failure' ? "border-red-500" : "border-blue-200"
+                    "absolute -left-[5px] top-0 w-2.5 h-2.5 rounded-full border-2 bg-white dark:bg-slate-800",
+                    idx === currentStepIndex ? "border-blue-600 dark:border-blue-400 scale-125" : 
+                    step.status === 'failure' ? "border-red-500" : "border-blue-200 dark:border-blue-800"
                   )} />
                   
-                  <div className="text-xs text-gray-400 mb-1 font-mono">
+                  <div className="text-xs text-gray-400 dark:text-slate-500 mb-1 font-mono">
                     T+{step.timestamp}ms
                   </div>
-                  <div className="flex items-center gap-2 text-sm font-medium text-gray-900">
-                    <span className="px-1.5 py-0.5 bg-gray-100 rounded text-xs text-gray-600 border border-gray-200">
+                  <div className="flex items-center gap-2 text-sm font-medium text-gray-900 dark:text-white">
+                    <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-slate-700 rounded text-xs text-gray-600 dark:text-slate-300 border border-gray-200 dark:border-slate-600">
                       {step.source}
                     </span>
-                    <ArrowRight className="w-3 h-3 text-gray-400" />
-                    <span className="px-1.5 py-0.5 bg-gray-100 rounded text-xs text-gray-600 border border-gray-200">
+                    <ArrowRight className="w-3 h-3 text-gray-400 dark:text-slate-500" />
+                    <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-slate-700 rounded text-xs text-gray-600 dark:text-slate-300 border border-gray-200 dark:border-slate-600">
                       {step.target}
                     </span>
                   </div>
                   <div className={cn(
                     "mt-1 text-sm p-2 rounded border",
-                    step.status === 'failure' ? "bg-red-50 text-red-700 border-red-100" : "bg-slate-50 text-slate-700 border-slate-100"
+                    step.status === 'failure' 
+                      ? "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 border-red-100 dark:border-red-800" 
+                      : "bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-100 dark:border-slate-700"
                   )}>
                     {step.message}
                   </div>
@@ -151,11 +153,11 @@ export function AgentDebuggerView() {
           </div>
 
           {/* Diagram */}
-          <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-[600px]">
-             <div className="p-4 border-b border-gray-100 bg-gray-50">
-              <h3 className="font-semibold text-gray-900">Sequence Diagram</h3>
+          <div className="lg:col-span-2 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden flex flex-col h-[600px]">
+             <div className="p-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-900/50">
+              <h3 className="font-semibold text-gray-900 dark:text-white">Sequence Diagram</h3>
             </div>
-            <div className="flex-1 overflow-auto p-4 bg-white">
+            <div className="flex-1 overflow-auto p-4 bg-white dark:bg-slate-800">
               <MermaidDiagram 
                 code={generateSimulationMermaid(trace)} 
                 className="h-full border-0 shadow-none"

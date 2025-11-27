@@ -16,7 +16,7 @@ interface PortfolioViewProps {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 export function PortfolioView({ onBack }: PortfolioViewProps) {
-  const { scenarios } = useSizingStore();
+  const { scenarios, setActiveScenario, setView } = useSizingStore();
   const [filterText, setFilterText] = useState('');
   const [sortField, setSortField] = useState<'date' | 'size'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -141,25 +141,25 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 p-8 transition-colors">
       <div className="max-w-7xl mx-auto space-y-8">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button 
               onClick={onBack}
-              className="p-2 hover:bg-white rounded-full transition-colors"
+              className="p-2 hover:bg-white dark:hover:bg-slate-800 rounded-full transition-colors"
             >
-              <ArrowLeft className="w-6 h-6 text-slate-600" />
+              <ArrowLeft className="w-6 h-6 text-slate-600 dark:text-slate-400" />
             </button>
             <div>
-              <h1 className="text-2xl font-bold text-slate-900">Portfolio Dashboard</h1>
-              <p className="text-slate-600">Analyze {scenarios.length} scenarios across your portfolio</p>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Portfolio Dashboard</h1>
+              <p className="text-slate-600 dark:text-slate-400">Analyze {scenarios.length} scenarios across your portfolio</p>
             </div>
           </div>
           <button
             onClick={handleExport}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-700 font-medium shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium shadow-sm transition-colors"
           >
             <Download className="w-4 h-4" />
             Export Summary
@@ -169,8 +169,8 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
         {/* Charts Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Size Distribution */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Size Distribution</h3>
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 transition-colors">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Size Distribution</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -196,15 +196,18 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
           </div>
 
           {/* Average Scores */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Avg. Score by Dimension</h3>
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 transition-colors">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Avg. Score by Dimension</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={avgScorePerDimension}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" fontSize={12} />
-                  <YAxis domain={[0, 3]} ticks={[1, 2, 3]} />
-                  <Tooltip />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.2} />
+                  <XAxis dataKey="name" fontSize={12} stroke="#94a3b8" />
+                  <YAxis domain={[0, 3]} ticks={[1, 2, 3]} stroke="#94a3b8" />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'var(--color-slate-800)', borderColor: 'var(--color-slate-700)', color: '#fff' }}
+                    itemStyle={{ color: '#fff' }}
+                  />
                   <Bar dataKey="score" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -212,15 +215,18 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
           </div>
 
           {/* High Complexity Drivers */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Top Complexity Drivers (Score 3)</h3>
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 transition-colors">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Top Complexity Drivers (Score 3)</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={highScoringDimensions} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" allowDecimals={false} />
-                  <YAxis dataKey="name" type="category" width={150} fontSize={11} />
-                  <Tooltip />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.2} />
+                  <XAxis type="number" allowDecimals={false} stroke="#94a3b8" />
+                  <YAxis dataKey="name" type="category" width={150} fontSize={11} stroke="#94a3b8" />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'var(--color-slate-800)', borderColor: 'var(--color-slate-700)', color: '#fff' }}
+                    itemStyle={{ color: '#fff' }}
+                  />
                   <Bar dataKey="count" fill="#ef4444" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -228,15 +234,18 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
           </div>
 
           {/* Tag Frequency */}
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">Top Industries</h3>
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 transition-colors">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Top Industries</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={tagFrequency.industries.slice(0, 5)} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" allowDecimals={false} />
-                  <YAxis dataKey="name" type="category" width={100} fontSize={12} />
-                  <Tooltip />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#94a3b8" opacity={0.2} />
+                  <XAxis type="number" allowDecimals={false} stroke="#94a3b8" />
+                  <YAxis dataKey="name" type="category" width={100} fontSize={12} stroke="#94a3b8" />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'var(--color-slate-800)', borderColor: 'var(--color-slate-700)', color: '#fff' }}
+                    itemStyle={{ color: '#fff' }}
+                  />
                   <Bar dataKey="value" fill="#10b981" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -245,9 +254,9 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
         </div>
 
         {/* Scenarios List */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <h3 className="text-lg font-semibold text-slate-900">All Scenarios</h3>
+        <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden transition-colors">
+          <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">All Scenarios</h3>
             
             <div className="flex items-center gap-4">
               <div className="relative">
@@ -257,11 +266,11 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
                   placeholder="Filter scenarios..."
                   value={filterText}
                   onChange={(e) => setFilterText(e.target.value)}
-                  className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="pl-9 pr-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400"
                 />
               </div>
               
-              <div className="flex items-center gap-2 border-l border-slate-200 pl-4">
+              <div className="flex items-center gap-2 border-l border-slate-200 dark:border-slate-700 pl-4">
                 <button
                   onClick={() => {
                     if (sortField === 'date') {
@@ -273,7 +282,9 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
                   }}
                   className={cn(
                     "px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1",
-                    sortField === 'date' ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"
+                    sortField === 'date' 
+                      ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" 
+                      : "text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700"
                   )}
                 >
                   Date
@@ -290,7 +301,9 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
                   }}
                   className={cn(
                     "px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1",
-                    sortField === 'size' ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"
+                    sortField === 'size' 
+                      ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" 
+                      : "text-slate-600 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-700"
                   )}
                 >
                   Size
@@ -302,7 +315,7 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-200">
+              <thead className="bg-slate-50 dark:bg-slate-700/50 text-slate-500 dark:text-slate-400 font-medium border-b border-slate-200 dark:border-slate-700">
                 <tr>
                   <th className="px-6 py-3">Scenario Name</th>
                   <th className="px-6 py-3">Customer</th>
@@ -312,11 +325,18 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
                   <th className="px-6 py-3">Date</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                 {filteredScenarios.map((scenario) => (
-                  <tr key={scenario.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-slate-900">{scenario.name}</td>
-                    <td className="px-6 py-4 text-slate-600">
+                  <tr 
+                    key={scenario.id} 
+                    className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors cursor-pointer"
+                    onClick={() => {
+                      setActiveScenario(scenario.id);
+                      setView('results');
+                    }}
+                  >
+                    <td className="px-6 py-4 font-medium text-slate-900 dark:text-white">{scenario.name}</td>
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
                       {scenario.customerName && (
                         <div className="flex items-center gap-1.5">
                           <Building2 className="w-3 h-3" />
@@ -324,7 +344,7 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-slate-600">
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">
                       {scenario.industry && (
                         <div className="flex items-center gap-1.5">
                           <Tag className="w-3 h-3" />
@@ -335,15 +355,15 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
                     <td className="px-6 py-4">
                       <span className={cn(
                         "px-2 py-1 rounded-full text-xs font-bold",
-                        scenario.tShirtSize === 'SMALL' ? "bg-green-100 text-green-700" :
-                        scenario.tShirtSize === 'MEDIUM' ? "bg-yellow-100 text-yellow-700" :
-                        "bg-red-100 text-red-700"
+                        scenario.tShirtSize === 'SMALL' ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" :
+                        scenario.tShirtSize === 'MEDIUM' ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" :
+                        "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                       )}>
                         {scenario.tShirtSize}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-slate-600">{scenario.totalScore}</td>
-                    <td className="px-6 py-4 text-slate-500">
+                    <td className="px-6 py-4 text-slate-600 dark:text-slate-400">{scenario.totalScore}</td>
+                    <td className="px-6 py-4 text-slate-500 dark:text-slate-500">
                       <div className="flex items-center gap-1.5">
                         <Calendar className="w-3 h-3" />
                         {scenario.date}
@@ -353,7 +373,7 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
                 ))}
                 {filteredScenarios.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-slate-500">
+                    <td colSpan={6} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">
                       No scenarios found matching your filter.
                     </td>
                   </tr>

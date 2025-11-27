@@ -59,13 +59,13 @@ export function SimulationDashboard() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-20 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex items-center justify-between bg-purple-50 p-6 rounded-xl border border-purple-100">
+      <div className="flex items-center justify-between bg-purple-50 dark:bg-purple-900/20 p-6 rounded-xl border border-purple-100 dark:border-purple-900/30">
         <div>
-          <div className="flex items-center gap-2 text-purple-900 font-bold text-xl mb-1">
+          <div className="flex items-center gap-2 text-purple-900 dark:text-purple-100 font-bold text-xl mb-1">
             <FlaskConical className="w-6 h-6" />
             Scenario Simulator
           </div>
-          <p className="text-purple-700">
+          <p className="text-purple-700 dark:text-purple-300">
             Simulating changes based on <span className="font-semibold">{originalScenario.name}</span>. 
             Adjust dimensions below to see impact on sizing and architecture.
           </p>
@@ -73,14 +73,14 @@ export function SimulationDashboard() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setActiveScenario(originalScenario.id)}
-            className="flex items-center gap-2 px-4 py-2 text-purple-700 hover:bg-purple-100 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded-lg transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Exit Simulation
           </button>
           <button
             onClick={handleDownload}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 dark:bg-purple-500 text-white font-medium rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors shadow-sm"
           >
             <Download className="w-4 h-4" />
             Export Summary
@@ -91,9 +91,9 @@ export function SimulationDashboard() {
       <div className="grid lg:grid-cols-3 gap-8">
         {/* Controls Column */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Activity className="w-4 h-4 text-blue-600" />
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Activity className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               Adjust Dimensions
             </h3>
             <div className="space-y-6">
@@ -105,17 +105,17 @@ export function SimulationDashboard() {
                 return (
                   <div key={dim.id} className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-gray-700">{dim.label}</span>
+                      <span className="font-medium text-gray-700 dark:text-slate-300">{dim.label}</span>
                       <div className="flex items-center gap-2">
                         {delta !== 0 && (
                           <span className={cn(
                             "text-xs font-bold px-1.5 py-0.5 rounded",
-                            delta > 0 ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
+                            delta > 0 ? "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400" : "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
                           )}>
                             {delta > 0 ? '+' : ''}{delta}
                           </span>
                         )}
-                        <span className="font-mono text-gray-500">{val}</span>
+                        <span className="font-mono text-gray-500 dark:text-slate-400">{val}</span>
                       </div>
                     </div>
                     <input
@@ -125,9 +125,9 @@ export function SimulationDashboard() {
                       step="1"
                       value={val || 1}
                       onChange={(e) => setScore(dim.id, parseInt(e.target.value) as ScoreValue)}
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                      className="w-full h-2 bg-gray-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-purple-600 dark:accent-purple-500"
                     />
-                    <div className="flex justify-between text-xs text-gray-400 px-1">
+                    <div className="flex justify-between text-xs text-gray-400 dark:text-slate-500 px-1">
                       <span>Small</span>
                       <span>Medium</span>
                       <span>Large</span>
@@ -144,37 +144,37 @@ export function SimulationDashboard() {
           {/* Top Metrics Comparison */}
           <div className="grid md:grid-cols-2 gap-6">
             {/* Original Card */}
-            <div className="bg-gray-50 rounded-xl border border-gray-200 p-6 opacity-75">
-              <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Baseline</div>
+            <div className="bg-gray-50 dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-700 p-6 opacity-75">
+              <div className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-4">Baseline</div>
               <div className="flex items-end gap-4 mb-2">
-                <div className="text-4xl font-bold text-gray-700">{originalResult.tShirtSize}</div>
-                <div className="text-sm text-gray-500 mb-1.5">Score: {originalResult.totalScore}</div>
+                <div className="text-4xl font-bold text-gray-700 dark:text-slate-300">{originalResult.tShirtSize}</div>
+                <div className="text-sm text-gray-500 dark:text-slate-400 mb-1.5">Score: {originalResult.totalScore}</div>
               </div>
               <div className="space-y-2 mt-4">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Est. Sprints</span>
+                  <span className="text-gray-600 dark:text-slate-400">Est. Sprints</span>
                   <span className="font-medium">{originalResult.tShirtSize === 'SMALL' ? '2-3' : originalResult.tShirtSize === 'MEDIUM' ? '4-6' : '8+'}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Team Size</span>
+                  <span className="text-gray-600 dark:text-slate-400">Team Size</span>
                   <span className="font-medium">{originalResult.tShirtSize === 'SMALL' ? '2-3' : originalResult.tShirtSize === 'MEDIUM' ? '4-6' : '8+'} FTEs</span>
                 </div>
               </div>
             </div>
 
             {/* Simulation Card */}
-            <div className="bg-white rounded-xl border-2 border-purple-100 shadow-sm p-6 relative overflow-hidden">
-              <div className="absolute top-0 right-0 bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1 rounded-bl-lg">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border-2 border-purple-100 dark:border-purple-900/30 shadow-sm p-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-xs font-bold px-3 py-1 rounded-bl-lg">
                 SIMULATION
               </div>
-              <div className="text-xs font-bold text-purple-600 uppercase tracking-wider mb-4">Projected</div>
+              <div className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider mb-4">Projected</div>
               <div className="flex items-end gap-4 mb-2">
-                <div className="text-4xl font-bold text-purple-900">{currentResult.tShirtSize}</div>
-                <div className="text-sm text-purple-600 mb-1.5">Score: {currentResult.totalScore}</div>
+                <div className="text-4xl font-bold text-purple-900 dark:text-purple-100">{currentResult.tShirtSize}</div>
+                <div className="text-sm text-purple-600 dark:text-purple-400 mb-1.5">Score: {currentResult.totalScore}</div>
                 {currentResult.totalScore !== originalResult.totalScore && (
                   <div className={cn(
                     "flex items-center text-sm font-bold mb-1.5",
-                    currentResult.totalScore > originalResult.totalScore ? "text-red-600" : "text-green-600"
+                    currentResult.totalScore > originalResult.totalScore ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"
                   )}>
                     {currentResult.totalScore > originalResult.totalScore ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
                     {Math.abs(currentResult.totalScore - originalResult.totalScore)}
@@ -183,21 +183,21 @@ export function SimulationDashboard() {
               </div>
               <div className="space-y-2 mt-4">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Est. Sprints</span>
-                  <span className="font-medium text-gray-900">{currentResult.tShirtSize === 'SMALL' ? '2-3' : currentResult.tShirtSize === 'MEDIUM' ? '4-6' : '8+'}</span>
+                  <span className="text-gray-600 dark:text-slate-400">Est. Sprints</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{currentResult.tShirtSize === 'SMALL' ? '2-3' : currentResult.tShirtSize === 'MEDIUM' ? '4-6' : '8+'}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Team Size</span>
-                  <span className="font-medium text-gray-900">{currentResult.tShirtSize === 'SMALL' ? '2-3' : currentResult.tShirtSize === 'MEDIUM' ? '4-6' : '8+'} FTEs</span>
+                  <span className="text-gray-600 dark:text-slate-400">Team Size</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{currentResult.tShirtSize === 'SMALL' ? '2-3' : currentResult.tShirtSize === 'MEDIUM' ? '4-6' : '8+'} FTEs</span>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Comparison Chart */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-6 flex items-center gap-2">
-              <BarChart3 className="w-4 h-4 text-blue-600" />
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               Dimension Impact Analysis
             </h3>
             <div className="space-y-4">
@@ -207,13 +207,13 @@ export function SimulationDashboard() {
                 
                 return (
                   <div key={dim.id} className="grid grid-cols-12 gap-4 items-center">
-                    <div className="col-span-4 text-xs font-medium text-gray-600 truncate" title={dim.label}>
+                    <div className="col-span-4 text-xs font-medium text-gray-600 dark:text-slate-300 truncate" title={dim.label}>
                       {dim.label}
                     </div>
-                    <div className="col-span-8 h-6 bg-gray-100 rounded-full overflow-hidden relative">
+                    <div className="col-span-8 h-6 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden relative">
                       {/* Original Marker */}
                       <div 
-                        className="absolute top-0 bottom-0 bg-gray-400 w-1 z-10"
+                        className="absolute top-0 bottom-0 bg-gray-400 dark:bg-slate-500 w-1 z-10"
                         style={{ left: `${(originalVal / 3) * 100}%` }}
                       />
                       {/* Current Bar */}
@@ -228,9 +228,9 @@ export function SimulationDashboard() {
                   </div>
                 );
               })}
-              <div className="flex justify-end gap-4 text-xs text-gray-500 mt-2">
+              <div className="flex justify-end gap-4 text-xs text-gray-500 dark:text-slate-400 mt-2">
                 <div className="flex items-center gap-1">
-                  <div className="w-1 h-3 bg-gray-400"></div>
+                  <div className="w-1 h-3 bg-gray-400 dark:bg-slate-500"></div>
                   <span>Baseline</span>
                 </div>
                 <div className="flex items-center gap-1">
@@ -242,59 +242,59 @@ export function SimulationDashboard() {
           </div>
 
           {/* Cost Estimation */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-green-600" />
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400" />
               Estimated Cost Impact (Year 1)
             </h3>
             <div className="grid md:grid-cols-2 gap-6">
-              <div className="p-4 bg-gray-50 rounded-lg border border-gray-100">
-                <div className="text-xs font-bold text-gray-500 uppercase mb-2">Baseline Estimate</div>
-                <div className="text-2xl font-bold text-gray-700 mb-1">
+              <div className="p-4 bg-gray-50 dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-700">
+                <div className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-2">Baseline Estimate</div>
+                <div className="text-2xl font-bold text-gray-700 dark:text-slate-300 mb-1">
                   {formatCurrency(originalCosts.totalFirstYear.min)} - {formatCurrency(originalCosts.totalFirstYear.max)}
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-gray-500 dark:text-slate-400">
                   Impl: {formatCurrency(originalCosts.implementation.min)} - {formatCurrency(originalCosts.implementation.max)}
                 </div>
               </div>
-              <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
-                <div className="text-xs font-bold text-purple-600 uppercase mb-2">Simulated Estimate</div>
-                <div className="text-2xl font-bold text-purple-900 mb-1">
+              <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-100 dark:border-purple-900/30">
+                <div className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase mb-2">Simulated Estimate</div>
+                <div className="text-2xl font-bold text-purple-900 dark:text-purple-100 mb-1">
                   {formatCurrency(currentCosts.totalFirstYear.min)} - {formatCurrency(currentCosts.totalFirstYear.max)}
                 </div>
-                <div className="text-xs text-purple-700">
+                <div className="text-xs text-purple-700 dark:text-purple-300">
                   Impl: {formatCurrency(currentCosts.implementation.min)} - {formatCurrency(currentCosts.implementation.max)}
                 </div>
               </div>
             </div>
-            <p className="text-xs text-gray-400 mt-3 italic">
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-3 italic">
               * Estimates include implementation, licensing, and Azure consumption. For rough order of magnitude only.
             </p>
           </div>
 
           {/* Architecture Changes */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 p-6">
              <div className="flex items-center justify-between mb-4">
-               <h3 className="font-semibold text-gray-900 flex items-center gap-2">
-                 <Network className="w-4 h-4 text-blue-600" />
+               <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                 <Network className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                  Architecture Implications
                </h3>
                <button 
                  onClick={() => setShowDiagram(!showDiagram)}
-                 className="text-xs font-medium text-blue-600 hover:text-blue-800 underline"
+                 className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 underline"
                >
                  {showDiagram ? 'Hide Diagram' : 'Show Diagram'}
                </button>
              </div>
              
              {showDiagram && (
-               <div className="mb-6 p-4 border border-gray-100 rounded-lg bg-gray-50/50">
+               <div className="mb-6 p-4 border border-gray-100 dark:border-slate-700 rounded-lg bg-gray-50/50 dark:bg-slate-900/50">
                  <div className="flex gap-2 mb-4">
                    <button
                      onClick={() => setDiagramType('architecture')}
                      className={cn(
                        "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
-                       diagramType === 'architecture' ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-gray-100"
+                       diagramType === 'architecture' ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" : "text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700"
                      )}
                    >
                      Agent Architecture
@@ -303,7 +303,7 @@ export function SimulationDashboard() {
                      onClick={() => setDiagramType('integration')}
                      className={cn(
                        "px-3 py-1.5 text-xs font-medium rounded-md transition-colors",
-                       diagramType === 'integration' ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:bg-gray-100"
+                       diagramType === 'integration' ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" : "text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700"
                      )}
                    >
                      System Integration
@@ -321,22 +321,22 @@ export function SimulationDashboard() {
 
              <div className="grid md:grid-cols-2 gap-6">
                 <div>
-                    <h4 className="text-xs font-bold text-gray-500 uppercase mb-2">Baseline Architecture</h4>
+                    <h4 className="text-xs font-bold text-gray-500 dark:text-slate-400 uppercase mb-2">Baseline Architecture</h4>
                     <ul className="space-y-1">
                         {originalResult.recommendedAgentPattern.map((p, i) => (
-                            <li key={i} className="text-xs text-gray-600 flex items-start gap-2">
-                                <span className="w-1 h-1 rounded-full bg-gray-400 mt-1.5"></span>
+                            <li key={i} className="text-xs text-gray-600 dark:text-slate-300 flex items-start gap-2">
+                                <span className="w-1 h-1 rounded-full bg-gray-400 dark:bg-slate-500 mt-1.5"></span>
                                 {p}
                             </li>
                         ))}
                     </ul>
                 </div>
                 <div>
-                    <h4 className="text-xs font-bold text-purple-600 uppercase mb-2">Simulated Architecture</h4>
+                    <h4 className="text-xs font-bold text-purple-600 dark:text-purple-400 uppercase mb-2">Simulated Architecture</h4>
                     <ul className="space-y-1">
                         {currentResult.recommendedAgentPattern.map((p, i) => (
-                            <li key={i} className="text-xs text-gray-800 flex items-start gap-2">
-                                <span className="w-1 h-1 rounded-full bg-purple-500 mt-1.5"></span>
+                            <li key={i} className="text-xs text-gray-800 dark:text-slate-200 flex items-start gap-2">
+                                <span className="w-1 h-1 rounded-full bg-purple-500 dark:bg-purple-400 mt-1.5"></span>
                                 {p}
                             </li>
                         ))}

@@ -1,18 +1,21 @@
 import React from 'react';
-import { Bot, HelpCircle } from 'lucide-react';
-import { Sidebar } from './Sidebar';
+import { Bot, Home, LayoutDashboard, BookOpen, Moon, Sun } from 'lucide-react';
+import { AssessmentProgress } from './AssessmentProgress';
+import { useSizingStore } from '../state/sizingStore';
+import { cn } from '../utils/cn';
 
 interface LayoutProps {
   children: React.ReactNode;
-  showSidebar?: boolean;
   onLogoClick?: () => void;
 }
 
-export function Layout({ children, showSidebar = false, onLogoClick }: LayoutProps) {
+export function Layout({ children, onLogoClick }: LayoutProps) {
+  const { currentView, setView, theme, toggleTheme } = useSizingStore();
+
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-sans selection:bg-blue-100 selection:text-blue-900 dark:selection:bg-blue-900 dark:selection:text-blue-100 transition-colors duration-200">
       {/* Top Navigation Bar */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm backdrop-blur-sm bg-white/90">
+      <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-20 shadow-sm backdrop-blur-sm bg-white/90 dark:bg-slate-800/90 transition-colors duration-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div 
             className={`flex items-center gap-3 ${onLogoClick ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
@@ -21,36 +24,62 @@ export function Layout({ children, showSidebar = false, onLogoClick }: LayoutPro
             <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-2 rounded-lg shadow-md text-white">
               <Bot className="w-6 h-6" />
             </div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">Agent Sizing Workshop</h1>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Agent Sizing Workshop</h1>
           </div>
-          <div className="flex items-center gap-4">
-            <button 
-              className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
-              aria-label="Help"
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setView('intro')}
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                currentView === 'intro' 
+                  ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" 
+                  : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-slate-700"
+              )}
             >
-              <HelpCircle className="w-5 h-5" />
+              <Home className="w-4 h-4" />
+              Home
             </button>
-            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-medium text-sm border border-blue-200 ring-2 ring-white shadow-sm">
-              JD
-            </div>
+            <button
+              onClick={() => setView('portfolio')}
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                currentView === 'portfolio' 
+                  ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" 
+                  : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-slate-700"
+              )}
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              Portfolio
+            </button>
+            <button
+              onClick={() => setView('knowledge')}
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                currentView === 'knowledge' 
+                  ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" 
+                  : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-slate-700"
+              )}
+            >
+              <BookOpen className="w-4 h-4" />
+              Knowledge Hub
+            </button>
+            <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-2" />
+            <button
+              onClick={toggleTheme}
+              className="p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-slate-700 rounded-full transition-colors"
+              title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+            >
+              {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+            </button>
           </div>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <div className="flex-1 max-w-7xl mx-auto w-full flex items-start gap-6 p-4 sm:p-6 lg:p-8">
+      <div className="flex-1 max-w-7xl mx-auto w-full p-4 sm:p-6 lg:p-8">
+        {currentView === 'wizard' && <AssessmentProgress />}
         
-        {/* Left Sidebar - Navigation / Progress */}
-        {showSidebar && (
-          <aside className="w-64 flex-shrink-0 hidden md:block sticky top-24 animate-in slide-in-from-left-4 duration-500">
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden p-4">
-              <Sidebar />
-            </div>
-          </aside>
-        )}
-
-        {/* Right Content - Main Application Area */}
-        <main className="flex-1 min-w-0">
+        <main className="min-w-0">
           {children}
         </main>
       </div>
