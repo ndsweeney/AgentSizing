@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bot, Home, LayoutDashboard, BookOpen, Moon, Sun } from 'lucide-react';
+import { Bot, Home, LayoutDashboard, BookOpen, Moon, Sun, LayoutTemplate } from 'lucide-react';
 import { AssessmentProgress } from './AssessmentProgress';
 import { useSizingStore } from '../state/sizingStore';
 import { cn } from '../utils/cn';
@@ -37,7 +37,7 @@ export function Layout({ children, onLogoClick }: LayoutProps) {
               )}
             >
               <Home className="w-4 h-4" />
-              Home
+              <span className="hidden sm:inline">Home</span>
             </button>
             <button
               onClick={() => setView('portfolio')}
@@ -49,7 +49,7 @@ export function Layout({ children, onLogoClick }: LayoutProps) {
               )}
             >
               <LayoutDashboard className="w-4 h-4" />
-              Portfolio
+              <span className="hidden sm:inline">Portfolio</span>
             </button>
             <button
               onClick={() => setView('knowledge')}
@@ -61,7 +61,19 @@ export function Layout({ children, onLogoClick }: LayoutProps) {
               )}
             >
               <BookOpen className="w-4 h-4" />
-              Knowledge Hub
+              <span className="hidden sm:inline">Knowledge</span>
+            </button>
+            <button
+              onClick={() => setView('reference')}
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                currentView === 'reference' 
+                  ? "bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" 
+                  : "text-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-slate-700"
+              )}
+            >
+              <LayoutTemplate className="w-4 h-4" />
+              <span className="hidden sm:inline">Reference</span>
             </button>
             <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 mx-2" />
             <button

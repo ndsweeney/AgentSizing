@@ -6,14 +6,17 @@ import { MermaidDiagram } from './MermaidDiagram';
 import { buildGovernanceMermaid } from '../domain/diagrams';
 import { calculateSizingResult } from '../domain/scoring';
 
+import { useRulesConfig } from '../hooks/useRulesConfig';
+
 interface GovernanceViewProps {
   scores: ScoresRecord;
 }
 
 export function GovernanceView({ scores }: GovernanceViewProps) {
-  const riskProfile = calculateRiskProfile(scores);
-  const pack = generateGovernancePack(scores, riskProfile);
-  const result = calculateSizingResult(scores);
+  const rulesConfig = useRulesConfig();
+  const riskProfile = calculateRiskProfile(scores, rulesConfig);
+  const pack = generateGovernancePack(scores, riskProfile, rulesConfig);
+  const result = calculateSizingResult(scores, rulesConfig);
   const governanceDiagram = buildGovernanceMermaid(result, scores);
 
   const getImpactColor = (level: string) => {

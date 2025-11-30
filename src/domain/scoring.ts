@@ -5,46 +5,34 @@ import {
   type RiskProfile,
   type RiskLevel
 } from './types';
+import { type RulesConfig, evaluateRule } from './rules';
+import { DEFAULT_RISK_RULES } from './defaults';
 export * from './types';
-export { calculateSizingResult } from './rules';
+export { calculateSizingResult, RISK_RULES, RISK_THRESHOLDS } from './rules';
 
-export function calculateRiskProfile(scores: ScoresRecord): RiskProfile {
-  const sensitivity = scores[DimensionId.DataSensitivity] || 1;
-  const systems = scores[DimensionId.SystemsToIntegrate] || 1;
-  const complexity = scores[DimensionId.WorkflowComplexity] || 1;
-  const reach = scores[DimensionId.UserReach] || 1;
-
+export function calculateRiskProfile(scores: ScoresRecord, rulesConfig?: RulesConfig): RiskProfile {
+  const rules = rulesConfig?.riskRules || DEFAULT_RISK_RULES;
   const reasons: string[] = [];
   let level: RiskLevel = "LOW";
 
-  // High Data Sensitivity is an immediate High Risk
-  if (sensitivity === 3) {
-    level = "HIGH";
-    reasons.push("High data sensitivity (PII/Financial) requires strict governance.");
-  } else if (sensitivity === 2) {
-    level = "MEDIUM";
-    reasons.push("Internal sensitive data requires access controls.");
+  // Evaluate all rules
+  for (const rule of rules) {
+    if (evaluateRule(rule.conditions, scores)) {
+      reasons.push(rule.reason);
+      
+      // Upgrade level if rule is higher
+      if (rule.level === 'HIGH') {
+        level = 'HIGH';
+      } else if (rule.level === 'MEDIUM' && level === 'LOW') {
+        level = 'MEDIUM';
+      }
+    }
   }
 
-  // Complex Systems Integration
-  if (systems === 3) {
-    level = "HIGH";
-    reasons.push("Integration with legacy/complex systems increases failure surface.");
-  }
-
-  // High Workflow Complexity
-  if (complexity === 3) {
-    if (level === "LOW") level = "MEDIUM";
-    reasons.push("Non-deterministic workflows require rigorous testing.");
-  }
-
-  // Broad User Reach
-  if (reach === 3) {
-    if (level === "LOW") level = "MEDIUM";
-    reasons.push("External/Global user base requires strict content safety.");
-  }
-
-  // If multiple medium factors, elevate to High
+  // If multiple medium factors, elevate to High (Hardcoded meta-rule for now, or could be a special rule type)
+  // Let's keep this hardcoded logic for "3+ Mediums = High" as it's a meta-rule
+  // Or we can implement it as a rule if we support "count of triggered rules" conditions.
+  // For now, let's assume the user can't edit this specific meta-rule easily without more complex UI.
   if (level === "MEDIUM" && reasons.length >= 3) {
     level = "HIGH";
     reasons.push("Multiple medium risk factors combined elevate overall risk.");

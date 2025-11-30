@@ -18,6 +18,7 @@ function createSpecForAgent(agent: AgentRecommendation, result: SizingResult): A
   
   const baseSpec: AgentSpec = {
     type: agent.type,
+    archetypeId: agent.archetypeId,
     title: `${agent.type} Specification`,
     purpose: agent.reason,
     inputs: ["User Query", "Context Variables"],
@@ -27,40 +28,98 @@ function createSpecForAgent(agent: AgentRecommendation, result: SizingResult): A
     governance: ["Log all interactions"]
   };
 
-  switch (agent.type) {
-    case "Experience Agents":
-      baseSpec.inputs.push("User Profile", "Channel Context");
-      baseSpec.steps = ["Identify User", "Determine Intent", "Route to Sub-Agent", "Synthesize Response"];
-      baseSpec.connectors.push("CRM", "Knowledge Base");
-      break;
-    case "Value Stream Agents":
-      baseSpec.purpose = "Orchestrate end-to-end business value delivery.";
-      baseSpec.steps = ["Initialize Workflow", "Coordinate Task Agents", "Monitor Progress", "Handle Exceptions"];
-      baseSpec.connectors.push("Core Business System", "Workflow Engine");
-      break;
-    case "Function Agents":
-      baseSpec.purpose = "Provide specific capabilities or calculations.";
-      baseSpec.inputs.push("Structured Data");
-      baseSpec.steps = ["Validate Input Data", "Perform Calculation/Lookup", "Return Result"];
-      baseSpec.connectors.push("Calculation Engine", "External API");
-      break;
-    case "Process Agents":
-      baseSpec.purpose = "Execute defined business processes.";
-      baseSpec.steps = ["Check Pre-conditions", "Execute Step 1", "Execute Step 2", "Update State"];
-      baseSpec.connectors.push("ERP", "Database");
-      break;
-    case "Task Agents":
-      baseSpec.purpose = "Perform atomic tasks.";
-      baseSpec.steps = ["Receive Command", "Execute Action", "Confirm Completion"];
-      baseSpec.connectors.push("Task API");
-      break;
-    case "Control Agents":
-      baseSpec.purpose = "Ensure compliance and safety.";
-      baseSpec.inputs.push("Draft Response", "User Prompt");
-      baseSpec.outputs.push("Approval/Rejection", "Modified Response");
-      baseSpec.steps = ["Analyze Content", "Check against Policy", "Approve or Reject"];
-      baseSpec.governance.push("Strict Audit Logging", "Human Oversight Escalation");
-      break;
+  if (agent.archetypeId) {
+    switch (agent.archetypeId) {
+      case "orchestrator":
+        baseSpec.purpose = "Coordinate multiple agents and workflows.";
+        baseSpec.steps = ["Decompose Request", "Select Agents", "Dispatch Tasks", "Aggregate Results", "Synthesize Response"];
+        baseSpec.connectors.push("Workflow Engine", "State Store");
+        break;
+      case "logical-reasoning":
+        baseSpec.purpose = "Perform complex analysis and decision making.";
+        baseSpec.steps = ["Analyze Context", "Formulate Hypothesis", "Evaluate Options", "Derive Conclusion"];
+        baseSpec.inputs.push("Unstructured Data", "Business Rules");
+        break;
+      case "specialist-domain":
+        baseSpec.purpose = "Provide expert knowledge in a specific domain.";
+        baseSpec.steps = ["Retrieve Knowledge", "Apply Domain Rules", "Generate Expert Response"];
+        baseSpec.connectors.push("Vector Database", "Knowledge Graph");
+        break;
+      case "connector-integration":
+        baseSpec.purpose = "Interface with external systems.";
+        baseSpec.steps = ["Authenticate", "Transform Request", "Call External API", "Normalize Response"];
+        baseSpec.connectors.push("External API", "Legacy System");
+        break;
+      case "user-facing-copilot":
+        baseSpec.purpose = "Manage user interaction and intent.";
+        baseSpec.inputs.push("User Profile", "Conversation History");
+        baseSpec.steps = ["Identify User", "Clarify Intent", "Route to Backend", "Personalize Response"];
+        baseSpec.connectors.push("CRM", "Channel Adapter");
+        break;
+      case "governance-guardrail":
+        baseSpec.purpose = "Ensure safety and compliance.";
+        baseSpec.inputs.push("Draft Content", "Policy Rules");
+        baseSpec.steps = ["Scan for Toxicity", "Check PII", "Validate Policy", "Approve/Reject"];
+        baseSpec.governance.push("Strict Audit Logging", "Real-time Blocking");
+        break;
+      case "meta-self-improving":
+        baseSpec.purpose = "Optimize system performance.";
+        baseSpec.steps = ["Monitor Execution", "Identify Bottlenecks", "Adjust Parameters", "Update Prompts"];
+        baseSpec.inputs.push("Execution Traces", "Feedback Scores");
+        break;
+      case "memory-context":
+        baseSpec.purpose = "Manage long-term state.";
+        baseSpec.steps = ["Index Interaction", "Retrieve Relevant Context", "Prune Old Data"];
+        baseSpec.connectors.push("Cosmos DB", "Redis");
+        break;
+      case "toolsmith-action":
+        baseSpec.purpose = "Select and execute tools dynamically.";
+        baseSpec.steps = ["Analyze Task", "Select Tool", "Generate Arguments", "Execute Tool", "Parse Result"];
+        baseSpec.connectors.push("Plugin Registry", "Azure Functions");
+        break;
+      case "simulation-planning":
+        baseSpec.purpose = "Simulate outcomes and plan actions.";
+        baseSpec.steps = ["Define Scenario", "Run Simulation", "Analyze Outcomes", "Generate Plan"];
+        baseSpec.inputs.push("Simulation Parameters", "World Model");
+        break;
+    }
+  } else {
+    // Fallback to legacy type-based generation
+    switch (agent.type) {
+      case "Experience Agents":
+        baseSpec.inputs.push("User Profile", "Channel Context");
+        baseSpec.steps = ["Identify User", "Determine Intent", "Route to Sub-Agent", "Synthesize Response"];
+        baseSpec.connectors.push("CRM", "Knowledge Base");
+        break;
+      case "Value Stream Agents":
+        baseSpec.purpose = "Orchestrate end-to-end business value delivery.";
+        baseSpec.steps = ["Initialize Workflow", "Coordinate Task Agents", "Monitor Progress", "Handle Exceptions"];
+        baseSpec.connectors.push("Core Business System", "Workflow Engine");
+        break;
+      case "Function Agents":
+        baseSpec.purpose = "Provide specific capabilities or calculations.";
+        baseSpec.inputs.push("Structured Data");
+        baseSpec.steps = ["Validate Input Data", "Perform Calculation/Lookup", "Return Result"];
+        baseSpec.connectors.push("Calculation Engine", "External API");
+        break;
+      case "Process Agents":
+        baseSpec.purpose = "Execute defined business processes.";
+        baseSpec.steps = ["Check Pre-conditions", "Execute Step 1", "Execute Step 2", "Update State"];
+        baseSpec.connectors.push("ERP", "Database");
+        break;
+      case "Task Agents":
+        baseSpec.purpose = "Perform atomic tasks.";
+        baseSpec.steps = ["Receive Command", "Execute Action", "Confirm Completion"];
+        baseSpec.connectors.push("Task API");
+        break;
+      case "Control Agents":
+        baseSpec.purpose = "Ensure compliance and safety.";
+        baseSpec.inputs.push("Draft Response", "User Prompt");
+        baseSpec.outputs.push("Approval/Rejection", "Modified Response");
+        baseSpec.steps = ["Analyze Content", "Check against Policy", "Approve or Reject"];
+        baseSpec.governance.push("Strict Audit Logging", "Human Oversight Escalation");
+        break;
+    }
   }
 
   if (isHighRisk) {

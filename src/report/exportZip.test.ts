@@ -53,6 +53,7 @@ const mockReport: ReportModel = {
     notes: [],
     recommendedAgentPattern: [],
     agentArchitecture: [],
+    testCases: [],
     copilotArchitecture: {
       experienceAgents: '',
       valueStreamAgents: '',

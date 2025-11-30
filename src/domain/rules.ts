@@ -9,66 +9,115 @@ import {
   type GovernanceItem,
   type RiskProfile
 } from './types';
+import type { PromptTemplateConfig } from './prompts';
+import type { GovernanceRuleConfig, RiskRuleConfig, ArchetypeTriggerConfig, CostDrivers, TestPlanTemplate, RuleCondition } from './logicTypes';
+import { DEFAULT_GOVERNANCE_RULES, DEFAULT_ARCHETYPE_TRIGGERS } from './defaults';
+import { type CostAssumptions } from './costs';
+import { type BenefitAssumptions } from './roi';
 
-export function getGovernanceChecklist(scores: ScoresRecord, riskProfile: RiskProfile): GovernanceItem[] {
+export interface RulesConfig {
+  sizingThresholds: typeof SIZING_THRESHOLDS;
+  riskThresholds: typeof RISK_THRESHOLDS;
+  promptTemplates?: Record<string, PromptTemplateConfig>;
+  governanceRules?: GovernanceRuleConfig[];
+  riskRules?: RiskRuleConfig[];
+  archetypeTriggers?: ArchetypeTriggerConfig[];
+  costDrivers?: CostDrivers;
+  costAssumptions?: CostAssumptions;
+  benefitAssumptions?: BenefitAssumptions;
+  testPlanTemplates?: TestPlanTemplate[];
+}
+
+export const SIZING_THRESHOLDS = {
+  MEDIUM: 12,
+  LARGE: 19
+};
+
+export const RISK_THRESHOLDS = {
+  HIGH: 3,
+  MEDIUM: 2,
+  LOW: 1
+};
+
+export const RISK_RULES = [
+  {
+    level: "HIGH",
+    condition: "Data Sensitivity = High (3)",
+    reason: "High data sensitivity (PII/Financial) requires strict governance."
+  },
+  {
+    level: "HIGH",
+    condition: "Systems to Integrate = High (3)",
+    reason: "Integration with legacy/complex systems increases failure surface."
+  },
+  {
+    level: "HIGH",
+    condition: "3+ Medium Risk Factors",
+    reason: "Multiple medium risk factors combined elevate overall risk."
+  },
+  {
+    level: "MEDIUM",
+    condition: "Data Sensitivity = Medium (2)",
+    reason: "Internal sensitive data requires access controls."
+  },
+  {
+    level: "MEDIUM",
+    condition: "Workflow Complexity = High (3)",
+    reason: "Non-deterministic workflows require rigorous testing."
+  },
+  {
+    level: "MEDIUM",
+    condition: "User Reach = High (3)",
+    reason: "External/Global user base requires strict content safety."
+  }
+];
+
+export const GOVERNANCE_RULES = [
+  {
+    trigger: "Data Sensitivity = High (3) OR Risk Level = High",
+    requirement: "DPIA (Data Protection Impact Assessment)",
+    category: "Compliance"
+  },
+  {
+    trigger: "Workflow Complexity >= Medium (2) OR Data Sensitivity >= Medium (2)",
+    requirement: "Human-in-the-loop Handoff Points",
+    category: "Oversight"
+  },
+  {
+    trigger: "Always",
+    requirement: "Comprehensive Conversation Logging",
+    category: "Traceability"
+  },
+  {
+    trigger: "Always",
+    requirement: "User Feedback Loop",
+    category: "Operations"
+  },
+  {
+    trigger: "User Reach = High (3)",
+    requirement: "Jailbreak & Prompt Injection Testing",
+    category: "Safety"
+  },
+  {
+    trigger: "Risk Level != Low",
+    requirement: "Azure AI Content Safety Filters (High)",
+    category: "Safety"
+  }
+];
+
+export function getGovernanceChecklist(scores: ScoresRecord, riskProfile: RiskProfile, rulesConfig?: RulesConfig): GovernanceItem[] {
   const items: GovernanceItem[] = [];
-  const sensitivity = scores[DimensionId.DataSensitivity] || 1;
-  const reach = scores[DimensionId.UserReach] || 1;
-  const complexity = scores[DimensionId.WorkflowComplexity] || 1;
+  const rules = rulesConfig?.governanceRules || DEFAULT_GOVERNANCE_RULES;
 
-  // DPIA/FRIA
-  if (sensitivity === 3 || riskProfile.level === "HIGH") {
-    items.push({
-      id: "dpia",
-      category: "Compliance",
-      question: "Has a Data Protection Impact Assessment (DPIA) been completed?",
-      required: true
-    });
-  }
-
-  // Human Oversight
-  if (complexity >= 2 || sensitivity >= 2) {
-    items.push({
-      id: "human-loop",
-      category: "Oversight",
-      question: "Are there defined 'Human-in-the-loop' handoff points?",
-      required: riskProfile.level === "HIGH"
-    });
-  }
-
-  // Logging
-  items.push({
-    id: "logging",
-    category: "Traceability",
-    question: "Is comprehensive conversation logging enabled for auditing?",
-    required: true
-  });
-
-  // Monitoring
-  items.push({
-    id: "monitoring",
-    category: "Operations",
-    question: "Is there a feedback loop for users to report issues?",
-    required: true
-  });
-
-  // LLM Safety
-  if (reach === 3) {
-    items.push({
-      id: "jailbreak",
-      category: "Safety",
-      question: "Have jailbreak and prompt injection tests been performed?",
-      required: true
-    });
-  }
-
-  if (riskProfile.level !== "LOW") {
-    items.push({
-      id: "content-safety",
-      category: "Safety",
-      question: "Are Azure AI Content Safety filters configured to 'High'?",
-      required: riskProfile.level === "HIGH"
-    });
+  for (const rule of rules) {
+    if (evaluateRule(rule.conditions, scores, riskProfile)) {
+      items.push({
+        id: rule.id,
+        category: rule.category,
+        question: rule.description,
+        required: true // Simplified for now, or we could add 'required' to the rule config
+      });
+    }
   }
 
   return items;
@@ -109,17 +158,18 @@ export function getArchitectureRecommendations(scores: ScoresRecord): string[] {
   return recs;
 }
 
-export function getDeliveryEstimate(scores: ScoresRecord): string[] {
+export function getDeliveryEstimate(scores: ScoresRecord, rulesConfig?: RulesConfig): string[] {
   const estimates: string[] = [];
+  const thresholds = rulesConfig?.sizingThresholds || SIZING_THRESHOLDS;
   let totalScore = 0;
   Object.values(scores).forEach(s => totalScore += (s || 0));
 
-  if (totalScore >= 20) {
+  if (totalScore >= thresholds.LARGE) {
     estimates.push("Timeline: 4-6 months for MVP.");
     estimates.push("Phase 1: Foundation & Core Integrations (8 weeks).");
     estimates.push("Phase 2: Agent Development & Testing (12 weeks).");
     estimates.push("Phase 3: Pilot & Tuning (4-6 weeks).");
-  } else if (totalScore >= 12) {
+  } else if (totalScore >= thresholds.MEDIUM) {
     estimates.push("Timeline: 2-3 months for MVP.");
     estimates.push("Phase 1: Design & Setup (4 weeks).");
     estimates.push("Phase 2: Build & Integrate (6 weeks).");
@@ -256,10 +306,11 @@ export function getCopilotArchitectureSpec(scores: ScoresRecord): CopilotArchite
   };
 }
 
-export function calculateSizingResult(scores: ScoresRecord): SizingResult {
+export function calculateSizingResult(scores: ScoresRecord, rulesConfig?: RulesConfig): SizingResult {
   let totalScore = 0;
   const notes: string[] = [];
   const recommendedAgentPattern: string[] = [];
+  const thresholds = rulesConfig?.sizingThresholds || SIZING_THRESHOLDS;
 
   // Calculate total score
   Object.values(scores).forEach(score => {
@@ -268,9 +319,9 @@ export function calculateSizingResult(scores: ScoresRecord): SizingResult {
 
   // Determine T-Shirt Size
   let tShirtSize: TShirtSize = "SMALL";
-  if (totalScore >= 19) {
+  if (totalScore >= thresholds.LARGE) {
     tShirtSize = "LARGE";
-  } else if (totalScore >= 12) {
+  } else if (totalScore >= thresholds.MEDIUM) {
     tShirtSize = "MEDIUM";
   } else {
     tShirtSize = "SMALL";
@@ -282,8 +333,6 @@ export function calculateSizingResult(scores: ScoresRecord): SizingResult {
   const systemsToIntegrate = scores[DimensionId.SystemsToIntegrate] || 0;
   const platformMix = scores[DimensionId.PlatformMix] || 0;
   const userReach = scores[DimensionId.UserReach] || 0;
-  const businessScope = scores[DimensionId.BusinessScope] || 0;
-  const agentCount = scores[DimensionId.AgentCountAndTypes] || 0;
 
   // Rule 1: Control Agents
   if (workflowComplexity === 3 || dataSensitivity === 3) {
@@ -312,38 +361,44 @@ export function calculateSizingResult(scores: ScoresRecord): SizingResult {
   }
 
   // Calculate Agent Architecture Recommendations
-  const agentArchitecture: AgentRecommendation[] = [
-    {
-      type: "Experience Agents",
-      necessity: userReach >= 2 ? "Definitely needed" : "Recommended",
-      reason: userReach >= 2 ? "High user reach requires dedicated experience handling." : "Good for consistent user interface."
-    },
-    {
-      type: "Value Stream Agents",
-      necessity: (tShirtSize === "LARGE" || businessScope === 3) ? "Definitely needed" : "Recommended",
-      reason: (tShirtSize === "LARGE" || businessScope === 3) ? "Complex business scope requires value stream alignment." : "Helps organize capabilities by business value."
-    },
-    {
-      type: "Function Agents",
-      necessity: (agentCount >= 2 || systemsToIntegrate >= 2) ? "Definitely needed" : "Optional",
-      reason: (agentCount >= 2 || systemsToIntegrate >= 2) ? "Needed to encapsulate specific system capabilities." : "May be overkill for simple agents."
-    },
-    {
-      type: "Process Agents",
-      necessity: workflowComplexity >= 2 ? "Definitely needed" : "Optional",
-      reason: workflowComplexity >= 2 ? "Required to manage multi-step stateful processes." : "Simple Q&A doesn't need process management."
-    },
-    {
-      type: "Task Agents",
-      necessity: "Recommended",
-      reason: "Fundamental building blocks for specific actions."
-    },
-    {
-      type: "Control Agents",
-      necessity: (dataSensitivity >= 2 || workflowComplexity === 3) ? "Definitely needed" : "Optional",
-      reason: (dataSensitivity >= 2 || workflowComplexity === 3) ? "Critical for governance and complex routing." : "Only needed for high compliance or complexity."
+  const agentArchitecture: AgentRecommendation[] = [];
+  const triggers = rulesConfig?.archetypeTriggers || DEFAULT_ARCHETYPE_TRIGGERS;
+
+  // Helper to map archetypeId to type (simplified mapping for now, ideally this comes from archetype definition)
+  const getAgentType = (id: string): string => {
+    if (['orchestrator'].includes(id)) return 'Value Stream Agents';
+    if (['user-facing-copilot', 'memory-context'].includes(id)) return 'Experience Agents';
+    if (['connector-integration', 'toolsmith-action'].includes(id)) return 'Task Agents';
+    if (['specialist-domain', 'logical-reasoning', 'simulation-planning'].includes(id)) return 'Function Agents';
+    if (['governance-guardrail', 'meta-self-improving'].includes(id)) return 'Control Agents';
+    return 'Other Agents';
+  };
+
+  for (const trigger of triggers) {
+    if (evaluateRule(trigger.conditions, scores)) {
+      // Check if already added with higher necessity?
+      // For simplicity, we just add it. The UI might show duplicates if multiple rules trigger.
+      // Or we can dedupe here.
+      const existing = agentArchitecture.find(a => a.archetypeId === trigger.archetypeId);
+      if (existing) {
+        // Upgrade necessity if needed
+        if (trigger.necessity === 'Definitely needed') {
+          existing.necessity = 'Definitely needed';
+          existing.reason += ` Also: ${trigger.reason}`;
+        } else if (trigger.necessity === 'Recommended' && existing.necessity === 'Optional') {
+          existing.necessity = 'Recommended';
+          existing.reason += ` Also: ${trigger.reason}`;
+        }
+      } else {
+        agentArchitecture.push({
+          type: getAgentType(trigger.archetypeId),
+          archetypeId: trigger.archetypeId,
+          necessity: trigger.necessity,
+          reason: trigger.reason
+        });
+      }
     }
-  ];
+  }
 
   const copilotArchitecture = getCopilotArchitectureSpec(scores);
 
@@ -351,8 +406,39 @@ export function calculateSizingResult(scores: ScoresRecord): SizingResult {
     totalScore,
     tShirtSize,
     notes,
-    recommendedAgentPattern,
+    recommendedAgentPattern: recommendedAgentPattern,
     agentArchitecture,
-    copilotArchitecture
+    copilotArchitecture,
+    testCases: []
   };
+}
+
+export function evaluateRule(conditions: RuleCondition[], scores: ScoresRecord, riskProfile?: RiskProfile): boolean {
+  if (conditions.length === 0) return true; // Always true if no conditions
+  return conditions.every(c => evaluateCondition(c, scores, riskProfile));
+}
+
+function evaluateCondition(condition: RuleCondition, scores: ScoresRecord, riskProfile?: RiskProfile): boolean {
+  // Special case for Risk Level check
+  if (condition.dimensionId === 'RISK_LEVEL') {
+    if (!riskProfile) return false;
+    // Map levels to numbers for comparison: LOW=1, MEDIUM=2, HIGH=3
+    const riskValue = riskProfile.level === 'HIGH' ? 3 : riskProfile.level === 'MEDIUM' ? 2 : 1;
+    return compare(riskValue, condition.operator, condition.value);
+  }
+
+  const score = scores[condition.dimensionId as DimensionId] || 0;
+  return compare(score, condition.operator, condition.value);
+}
+
+function compare(a: number, op: string, b: number): boolean {
+  switch (op) {
+    case '>=': return a >= b;
+    case '>': return a > b;
+    case '<=': return a <= b;
+    case '<': return a < b;
+    case '==': return a === b;
+    case '!=': return a !== b;
+    default: return false;
+  }
 }

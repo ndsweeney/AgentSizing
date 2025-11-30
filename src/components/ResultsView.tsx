@@ -77,6 +77,8 @@ const TABS_BY_CATEGORY: Record<TabCategory, { id: string; label: string }[]> = {
   ]
 };
 
+import { useRulesConfig } from '../hooks/useRulesConfig';
+
 interface ResultsViewProps {
   onRestart: () => void;
   onEdit: () => void;
@@ -89,16 +91,17 @@ export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
   const [activeTab, setActiveTab] = useState<'details-info' | 'details-notes' | 'details-breakdown' | 'architecture' | 'integration' | 'governance' | 'copilot' | 'diagrams' | 'data' | 'blueprints' | 'skeletons' | 'prompts' | 'connectors' | 'tests' | 'delivery' | 'costs' | 'starter-pack' | 'debugger' | 'compliance' | 'maturity' | 'roadmap' | 'report' | 'example-architecture' | 'risks'>('details-info');
   const { scores, targetScores, scenario, mode } = useActiveScenario();
   const { setSystems, updateMetadata, isReadOnly, createSimulation, setActiveScenario } = useSizingStore();
+  const rulesConfig = useRulesConfig();
   const isComplete = useHasCompletedAllDimensions();
 
   if (scenario.isSimulation) {
     return <SimulationDashboard />;
   }
 
-  const result = calculateSizingResult(scores);
-  const riskProfile = calculateRiskProfile(scores);
+  const result = calculateSizingResult(scores, rulesConfig);
+  const riskProfile = calculateRiskProfile(scores, rulesConfig);
 
-  const targetResult = mode === 'compare' ? calculateSizingResult(targetScores) : null;
+  const targetResult = mode === 'compare' ? calculateSizingResult(targetScores, rulesConfig) : null;
 
   const recommendations = getRecommendations(scores);
 
@@ -242,17 +245,17 @@ export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
   return (
     <div className="max-w-full mx-auto py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
       
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">{scenario.workshopTitle || scenario.name}</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             {mode === 'compare' ? 'Gap Analysis: Current vs Target' : 'Assessment Results'}
           </p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 w-full md:w-auto">
           <button
             onClick={handleShare}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-sm"
+            className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 dark:bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-sm w-full md:w-auto"
           >
             {copiedShare ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
             {copiedShare ? 'Link Copied!' : 'Share Results'}
@@ -316,7 +319,7 @@ export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
 
               <div className="flex flex-col sm:flex-row items-center gap-8 overflow-x-auto pb-4">
                     <div className={cn(
-                      "w-48 h-36 flex flex-col items-center justify-center rounded-2xl border-4 shadow-sm transition-all flex-shrink-0",
+                      "w-full sm:w-48 h-36 flex flex-col items-center justify-center rounded-2xl border-4 shadow-sm transition-all flex-shrink-0",
                       getSizeColor(result.tShirtSize)
                     )}>
                       <span className="text-4xl font-bold">{result.tShirtSize}</span>
@@ -324,14 +327,14 @@ export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
                     </div>
 
                     <div className={cn(
-                      "w-48 h-36 flex flex-col items-center justify-center rounded-2xl border-4 shadow-sm transition-all flex-shrink-0",
+                      "w-full sm:w-48 h-36 flex flex-col items-center justify-center rounded-2xl border-4 shadow-sm transition-all flex-shrink-0",
                       riskColor
                     )}>
                       <span className="text-4xl font-bold">{riskProfile.level}</span>
                       <span className="text-sm font-medium opacity-80 uppercase tracking-wider mt-1">Risk</span>
                     </div>
 
-                    <div className="w-48 h-36 flex flex-col items-center justify-center rounded-2xl border-4 border-gray-100 dark:border-slate-700 shadow-sm transition-all bg-white dark:bg-slate-800 px-4 flex-shrink-0">
+                    <div className="w-full sm:w-48 h-36 flex flex-col items-center justify-center rounded-2xl border-4 border-gray-100 dark:border-slate-700 shadow-sm transition-all bg-white dark:bg-slate-800 px-4 flex-shrink-0">
                       <div className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight flex items-baseline gap-2">
                         {result.totalScore} <span className="text-lg text-gray-400 font-normal">/ {DIMENSIONS.length * 3}</span>
                       </div>
@@ -358,7 +361,7 @@ export function ResultsView({ onRestart, onEdit }: ResultsViewProps) {
                           createSimulation();
                         }
                       }}
-                      className="w-48 h-36 flex flex-col items-center justify-center gap-2 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-4 border-purple-200 dark:border-purple-800 rounded-2xl text-lg font-bold hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors shadow-sm flex-shrink-0 sm:ml-auto"
+                      className="w-full sm:w-48 h-36 flex flex-col items-center justify-center gap-2 bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border-4 border-purple-200 dark:border-purple-800 rounded-2xl text-lg font-bold hover:bg-purple-100 dark:hover:bg-purple-900/40 transition-colors shadow-sm flex-shrink-0 sm:ml-auto"
                     >
                       {scenario.isSimulation ? (
                         <>

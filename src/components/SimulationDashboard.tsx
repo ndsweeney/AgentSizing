@@ -8,9 +8,12 @@ import { MermaidDiagram } from './MermaidDiagram';
 import { cn } from '../utils/cn';
 import { downloadJson } from '../utils/export';
 
+import { useRulesConfig } from '../hooks/useRulesConfig';
+
 export function SimulationDashboard() {
   const { scenario, scores } = useActiveScenario();
   const { scenarios, setActiveScenario, setScore } = useSizingStore();
+  const rulesConfig = useRulesConfig();
   const [showDiagram, setShowDiagram] = useState(false);
   const [diagramType, setDiagramType] = useState<'integration' | 'architecture'>('architecture');
   
@@ -25,8 +28,8 @@ export function SimulationDashboard() {
       );
   }
 
-  const originalResult = calculateSizingResult(originalScenario.scores);
-  const currentResult = calculateSizingResult(scores);
+  const originalResult = calculateSizingResult(originalScenario.scores, rulesConfig);
+  const currentResult = calculateSizingResult(scores, rulesConfig);
   
   const originalCosts = calculateEstimatedCosts(originalResult);
   const currentCosts = calculateEstimatedCosts(currentResult);
@@ -59,7 +62,7 @@ export function SimulationDashboard() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-20 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex items-center justify-between bg-purple-50 dark:bg-purple-900/20 p-6 rounded-xl border border-purple-100 dark:border-purple-900/30">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between bg-purple-50 dark:bg-purple-900/20 p-6 rounded-xl border border-purple-100 dark:border-purple-900/30 gap-4">
         <div>
           <div className="flex items-center gap-2 text-purple-900 dark:text-purple-100 font-bold text-xl mb-1">
             <FlaskConical className="w-6 h-6" />
@@ -70,17 +73,17 @@ export function SimulationDashboard() {
             Adjust dimensions below to see impact on sizing and architecture.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
           <button
             onClick={() => setActiveScenario(originalScenario.id)}
-            className="flex items-center gap-2 px-4 py-2 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded-lg transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded-lg transition-colors flex-1 md:flex-none justify-center"
           >
             <ArrowLeft className="w-4 h-4" />
             Exit Simulation
           </button>
           <button
             onClick={handleDownload}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 dark:bg-purple-500 text-white font-medium rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 dark:bg-purple-500 text-white font-medium rounded-lg hover:bg-purple-700 dark:hover:bg-purple-600 transition-colors shadow-sm flex-1 md:flex-none justify-center"
           >
             <Download className="w-4 h-4" />
             Export Summary

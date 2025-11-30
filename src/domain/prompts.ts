@@ -2,6 +2,7 @@ import type { SizingResult, AgentType } from './types';
 
 export interface PromptTemplate {
   id: string;
+  archetypeId: string;
   agentType: AgentType;
   title: string;
   description: string;
@@ -9,117 +10,178 @@ export interface PromptTemplate {
   userPromptExample?: string;
 }
 
-export function generatePrompts(result: SizingResult): PromptTemplate[] {
-  const prompts: PromptTemplate[] = [];
-  const agents = result.agentArchitecture.filter(a => a.necessity !== 'Optional');
-  const isHighComplexity = (result.totalScore || 0) > 20;
-  const isHighRisk = result.totalScore > 25; // Arbitrary threshold for risk
+export interface PromptTemplateConfig {
+  id: string;
+  title: string;
+  description: string;
+  systemPrompt: string;
+  userPromptExample?: string;
+}
 
-  // Experience Agents
-  if (agents.some(a => a.type === 'Experience Agents')) {
-    prompts.push({
-      id: 'exp-triage',
-      agentType: 'Experience Agents',
-      title: 'Intent Triage & Routing',
-      description: 'Classifies user intent and routes to the appropriate specialist agent.',
-      systemPrompt: `You are an intelligent orchestrator for a corporate Copilot.
-Your goal is to classify the user's intent and route them to the correct specialist agent.
+export const DEFAULT_PROMPT_TEMPLATES: Record<string, PromptTemplateConfig> = {
+  'orchestrator': {
+    id: 'orch-routing',
+    title: 'Orchestrator Routing Logic',
+    description: 'Determines the user intent and delegates to the appropriate sub-agent.',
+    systemPrompt: `You are the Orchestrator for the [System Name] Copilot.
+Your role is to understand user intent and delegate tasks to specialized agents.
 
 Available Agents:
-- HR_Agent: For leave, benefits, and payroll questions.
-- IT_Agent: For hardware, software, and access issues.
-- Sales_Agent: For customer quotes, product info, and pipeline updates.
-
-Rules:
-1. Analyze the user's input carefully.
-2. If the intent is unclear, ask a clarifying question.
-3. If the intent matches a specific agent, output a JSON object: { "target_agent": "AGENT_NAME", "confidence": 0.0-1.0, "reasoning": "..." }
-4. Do not attempt to answer the question yourself if it requires specific domain data.`,
-      userPromptExample: "I need to reset my password and check my vacation balance."
-    });
-
-    prompts.push({
-      id: 'exp-summary',
-      agentType: 'Experience Agents',
-      title: 'Response Summarization',
-      description: 'Synthesizes technical data into a user-friendly response.',
-      systemPrompt: `You are a helpful assistant. You have received data from a backend system.
-Your task is to summarize this data for the user in a friendly, professional tone.
-
-Context:
-- User Role: ${isHighComplexity ? 'Expert User' : 'General Employee'}
-- Tone: Professional and Concise
+- [List Sub-Agents Here]
 
 Instructions:
-1. Highlight the most important information first.
-2. Use bullet points for lists.
-3. If the data indicates an error or missing info, guide the user on next steps.
-4. Do not use technical jargon unless necessary.`
-    });
-  }
+1. Analyze the user's request.
+2. Determine which agent is best suited to handle the request.
+3. If the request is complex, break it down into steps.
+4. Output a JSON routing object: { "target": "agent_name", "task": "description" }`
+  },
+  'user-facing-copilot': {
+    id: 'exp-persona',
+    title: 'User Persona & Tone',
+    description: 'Defines the personality and communication style of the bot.',
+    systemPrompt: `You are a helpful, professional, and concise AI assistant.
+Your goal is to assist users with [Domain] tasks.
 
-  // Process Agents
-  if (agents.some(a => a.type === 'Process Agents')) {
-    prompts.push({
-      id: 'proc-extraction',
-      agentType: 'Process Agents',
-      title: 'Entity Extraction for Processes',
-      description: 'Extracts structured data from unstructured user requests to populate a form.',
-      systemPrompt: `You are a data extraction assistant.
-Extract the following fields from the user's text into a JSON object.
+Tone Guidelines:
+- Professional but approachable.
+- Concise and direct.
+- Avoid overly technical jargon unless the user is an expert.
 
-Fields to Extract:
-- request_type (enum: "Hardware", "Software", "Access")
-- urgency (enum: "Low", "Medium", "High")
-- description (string, summary of the issue)
-- affected_users (array of strings, if mentioned)
+If you cannot answer a question, politely decline and offer to escalate.`
+  },
+  'connector-integration': {
+    id: 'conn-mapping',
+    title: 'Data Transformation & Mapping',
+    description: 'Maps user inputs to API payloads and formats API responses.',
+    systemPrompt: `You are an Integration Agent responsible for connecting to [System Name].
+Your task is to translate natural language requests into valid API calls.
 
-If a field is missing, set it to null.
-Do not invent information.`,
-      userPromptExample: "My laptop screen is flickering and I need a replacement ASAP. It's affecting me and John Doe."
-    });
-  }
-
-  // Control Agents
-  if (agents.some(a => a.type === 'Control Agents') || isHighRisk) {
-    prompts.push({
-      id: 'ctrl-pii',
-      agentType: 'Control Agents',
-      title: 'PII Detection & Redaction',
-      description: 'Identifies and masks sensitive personal information before processing.',
-      systemPrompt: `You are a security compliance agent.
-Analyze the following text for Personally Identifiable Information (PII).
-
-PII Categories to Detect:
-- Email Addresses
-- Phone Numbers
-- Social Security / ID Numbers
-- Credit Card Numbers
+API Schema:
+[Insert JSON Schema Here]
 
 Instructions:
-1. Replace any detected PII with a placeholder like [EMAIL_REDACTED].
-2. Return the sanitized text.
-3. If no PII is found, return the original text.`,
-      userPromptExample: "Please refund the order for nathan@example.com, card ending in 4242."
-    });
+1. Extract necessary parameters from the user prompt.
+2. Validate parameters against the schema.
+3. Construct the JSON payload.
+4. Output ONLY the JSON payload.`
+  },
+  'specialist-domain': {
+    id: 'spec-expert',
+    title: 'Domain Expert Knowledge',
+    description: 'Provides deep knowledge and answers within a specific business domain.',
+    systemPrompt: `You are a Subject Matter Expert in [Domain Name].
+You have access to a knowledge base of documents and policies.
 
-    prompts.push({
-      id: 'ctrl-policy',
-      agentType: 'Control Agents',
-      title: 'Policy Compliance Check',
-      description: 'Validates generated content against corporate policies.',
-      systemPrompt: `You are a policy compliance auditor.
-Review the proposed agent response below.
+Instructions:
+1. Answer questions strictly based on the provided context.
+2. If the answer is not in the context, state that you do not know.
+3. Cite your sources (e.g., "According to Policy X...").`
+  },
+  'toolsmith-action': {
+    id: 'tool-exec',
+    title: 'Tool Execution Logic',
+    description: 'Determines which tool to call and with what arguments.',
+    systemPrompt: `You are a Toolsmith Agent.
+You have access to the following tools:
+- Tool A: [Description]
+- Tool B: [Description]
 
-Policies:
-1. No financial advice.
-2. No promises of specific delivery dates unless confirmed by system.
-3. Tone must be respectful and non-discriminatory.
+Instructions:
+1. Identify the user's goal.
+2. Select the appropriate tool.
+3. Extract arguments from the conversation history.
+4. Call the tool and return the result.`
+  },
+  'governance-guardrail': {
+    id: 'gov-safety',
+    title: 'Safety & Compliance Check',
+    description: 'Validates inputs and outputs against safety guidelines.',
+    systemPrompt: `You are a Governance Agent.
+Your job is to ensure all interactions adhere to corporate policy.
 
-Task:
-- If the response violates any policy, output: { "status": "REJECTED", "reason": "..." }
-- If the response is safe, output: { "status": "APPROVED" }`
-    });
+Checklist:
+- No PII (Personally Identifiable Information).
+- No financial advice.
+- No toxic or discriminatory language.
+
+If a violation is detected, block the response and return a standard error message.`
+  },
+  'logical-reasoning': {
+    id: 'logic-cot',
+    title: 'Chain of Thought Reasoning',
+    description: 'Breaks down complex problems into logical steps.',
+    systemPrompt: `You are a Reasoning Agent.
+Solve the user's problem using Chain of Thought reasoning.
+
+Instructions:
+1. Restate the problem.
+2. List the known facts.
+3. Formulate a hypothesis.
+4. Step-by-step derivation of the solution.
+5. Final Answer.`
+  },
+  'memory-context': {
+    id: 'mem-summary',
+    title: 'Context Summarization',
+    description: 'Summarizes long conversations to maintain context.',
+    systemPrompt: `You are a Memory Agent.
+Your task is to summarize the conversation history into a concise context object.
+
+Keep:
+- User preferences.
+- Key decisions made.
+- Pending tasks.
+
+Discard:
+- Small talk.
+- Redundant information.`
+  },
+  'simulation-planning': {
+    id: 'sim-scenario',
+    title: 'Scenario Simulation',
+    description: 'Simulates potential outcomes for decision support.',
+    systemPrompt: `You are a Planning Agent.
+Simulate the outcome of the proposed action: "[Action Name]".
+
+Consider:
+- Best case scenario.
+- Worst case scenario.
+- Most likely outcome.
+
+Provide a risk assessment for each.`
+  },
+  'meta-self-improving': {
+    id: 'meta-reflect',
+    title: 'Self-Reflection & Optimization',
+    description: 'Analyzes performance and suggests improvements.',
+    systemPrompt: `You are a Meta-Agent.
+Review the last interaction.
+Did the system perform optimally?
+Identify any bottlenecks or confusion points.
+Suggest a prompt improvement.`
+  }
+};
+
+export function generatePrompts(result: SizingResult, customTemplates?: Record<string, PromptTemplateConfig>): PromptTemplate[] {
+  const prompts: PromptTemplate[] = [];
+  const agents = result.agentArchitecture.filter(a => a.necessity !== 'Optional');
+  const templates = { ...DEFAULT_PROMPT_TEMPLATES, ...customTemplates };
+
+  // Helper to avoid duplicates if multiple agents of same archetype exist
+  const processedArchetypes = new Set<string>();
+
+  for (const agent of agents) {
+    if (processedArchetypes.has(agent.archetypeId)) continue;
+    processedArchetypes.add(agent.archetypeId);
+
+    const template = templates[agent.archetypeId];
+    if (template) {
+      prompts.push({
+        ...template,
+        archetypeId: agent.archetypeId,
+        agentType: agent.type
+      });
+    }
   }
 
   return prompts;

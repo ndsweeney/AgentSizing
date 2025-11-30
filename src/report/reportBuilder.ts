@@ -1,4 +1,5 @@
 import { useSizingStore } from '../state/sizingStore';
+import { useRulesStore } from '../state/rulesStore';
 import { calculateSizingResult, calculateRiskProfile } from '../domain/scoring';
 import { calculateMaturityResult } from '../domain/maturity';
 import { 
@@ -17,20 +18,34 @@ import { calculateRoi, DEFAULT_BENEFIT_ASSUMPTIONS } from '../domain/roi';
 import { generateValueRoadmap } from '../domain/roadmap';
 import { generateDeliveryPlan } from '../domain/delivery';
 import { KNOWLEDGE_BASE } from '../domain/knowledge';
-import { generatePrompts, generateTestPlan, generateStarterPack, generateDebuggerConfig } from '../domain/reportingExtras';
+import { generatePrompts } from '../domain/prompts';
+import { generateTestPlan, generateStarterPack, generateDebuggerConfig } from '../domain/reportingExtras';
 import type { ReportModel } from './reportModel';
 import type { ConnectorDefinition } from '../domain/connectors';
 
 export function buildReportModel(scenarioId: string): ReportModel | null {
   const state = useSizingStore.getState();
+  const rulesState = useRulesStore.getState();
+  const rulesConfig = { 
+    sizingThresholds: rulesState.sizingThresholds, 
+    riskThresholds: rulesState.riskThresholds,
+    promptTemplates: rulesState.promptTemplates,
+    governanceRules: rulesState.governanceRules,
+    riskRules: rulesState.riskRules,
+    archetypeTriggers: rulesState.archetypeTriggers,
+    costDrivers: rulesState.costDrivers,
+    costAssumptions: rulesState.costAssumptions,
+    benefitAssumptions: rulesState.benefitAssumptions,
+    testPlanTemplates: rulesState.testPlanTemplates
+  };
   const scenario = state.scenarios.find(s => s.id === scenarioId);
 
   if (!scenario) {
     return null;
   }
 
-  const sizingResult = calculateSizingResult(scenario.scores);
-  const riskProfile = calculateRiskProfile(scenario.scores);
+  const sizingResult = calculateSizingResult(scenario.scores, rulesConfig);
+  const riskProfile = calculateRiskProfile(scenario.scores, rulesConfig);
   const maturityResult = calculateMaturityResult(scenario.maturityScores);
 
   // Architecture Diagrams
@@ -46,7 +61,7 @@ export function buildReportModel(scenarioId: string): ReportModel | null {
   const topicSkeletons = generateTopicSkeletons(sizingResult);
 
   // Prompts
-  const prompts = generatePrompts(sizingResult);
+  const prompts = generatePrompts(sizingResult, rulesConfig.promptTemplates);
 
   // Connectors
   const connectors = (scenario.systems || [])
@@ -56,14 +71,14 @@ export function buildReportModel(scenarioId: string): ReportModel | null {
     .filter((c, index, self) => index === self.findIndex(t => t.id === c.id));
 
   // Governance
-  const governancePack = generateGovernancePack(scenario.scores, riskProfile);
+  const governancePack = generateGovernancePack(scenario.scores, riskProfile, rulesConfig);
 
   // Costs
-  const costAssumptions = scenario.costAssumptions || DEFAULT_COST_ASSUMPTIONS;
+  const costAssumptions = scenario.costAssumptions || rulesConfig.costAssumptions || DEFAULT_COST_ASSUMPTIONS;
   const costs = calculateDetailedCosts(sizingResult, scenario.scores, costAssumptions);
 
   // ROI
-  const benefitAssumptions = scenario.benefitAssumptions || DEFAULT_BENEFIT_ASSUMPTIONS;
+  const benefitAssumptions = scenario.benefitAssumptions || rulesConfig.benefitAssumptions || DEFAULT_BENEFIT_ASSUMPTIONS;
   const roi = calculateRoi(benefitAssumptions, costs.totalOneTime, costs.totalMonthly);
 
   // Roadmap

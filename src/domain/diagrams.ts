@@ -21,8 +21,11 @@ export interface DiagramDefinition {
 }
 
 export function buildSystemIntegrationMermaid(result: SizingResult, systems: string[]): DiagramDefinition {
-  const { tShirtSize, copilotArchitecture } = result;
+  const { agentArchitecture } = result;
   const hasSystems = systems.length > 0;
+  
+  const activeAgents = agentArchitecture.filter(a => a.necessity !== 'Optional');
+  const archetypes = new Set(activeAgents.map(a => a.archetypeId));
 
   let mermaidCode = 'graph TD\n';
   mermaidCode += '  classDef agent fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0c4a6e;\n';
@@ -32,18 +35,24 @@ export function buildSystemIntegrationMermaid(result: SizingResult, systems: str
   mermaidCode += '  subgraph Agents["Copilot Agents"]\n';
   mermaidCode += '    Exp[Experience Layer]:::agent\n';
   
-  if (copilotArchitecture.valueStreamAgents.includes("Required") || tShirtSize === 'LARGE') {
-    mermaidCode += '    VS[Value Stream Layer]:::agent\n';
-    mermaidCode += '    Exp --> VS\n';
+  let parentNode = 'Exp';
+
+  if (archetypes.has('orchestrator')) {
+    mermaidCode += '    Orch[Orchestrator]:::agent\n';
+    mermaidCode += '    Exp --> Orch\n';
+    parentNode = 'Orch';
   }
   
-  mermaidCode += '    Func[Function Layer]:::agent\n';
-  const funcParent = (copilotArchitecture.valueStreamAgents.includes("Required") || tShirtSize === 'LARGE') ? 'VS' : 'Exp';
-  mermaidCode += `    ${funcParent} --> Func\n`;
+  if (archetypes.has('specialist-domain') || archetypes.has('logical-reasoning')) {
+    mermaidCode += '    Domain[Domain Layer]:::agent\n';
+    mermaidCode += `    ${parentNode} --> Domain\n`;
+    parentNode = 'Domain';
+  }
 
-  if (copilotArchitecture.processAgents !== "0") {
-    mermaidCode += '    Proc[Process Layer]:::agent\n';
-    mermaidCode += '    Func --> Proc\n';
+  if (archetypes.has('connector-integration') || archetypes.has('toolsmith-action')) {
+    mermaidCode += '    Task[Task Layer]:::agent\n';
+    mermaidCode += `    ${parentNode} --> Task\n`;
+    parentNode = 'Task';
   }
   
   mermaidCode += '  end\n';
@@ -60,15 +69,12 @@ export function buildSystemIntegrationMermaid(result: SizingResult, systems: str
 
     // Connections
     // Connect lowest available agent layer to systems
-    let connector = 'Func';
-    if (copilotArchitecture.processAgents !== "0") connector = 'Proc';
-    
     systems.forEach((_, idx) => {
-      mermaidCode += `  ${connector} -.-> Sys${idx}\n`;
+      mermaidCode += `  ${parentNode} -.-> Sys${idx}\n`;
     });
   } else {
     mermaidCode += '  Note[No external systems defined]:::system\n';
-    mermaidCode += '  Func -.-> Note\n';
+    mermaidCode += `  ${parentNode} -.-> Note\n`;
   }
 
   return {
@@ -82,103 +88,107 @@ export function buildSystemIntegrationMermaid(result: SizingResult, systems: str
 }
 
 export function buildAgentArchitectureMermaid(result: SizingResult): DiagramDefinition {
-  const { tShirtSize, copilotArchitecture } = result;
+  const { tShirtSize, agentArchitecture } = result;
   
   let mermaidCode = 'graph TD\n';
   mermaidCode += '  classDef agent fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0c4a6e;\n';
   mermaidCode += '  classDef control fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#78350f;\n';
   mermaidCode += '  classDef system fill:#f3f4f6,stroke:#6b7280,stroke-width:1px,color:#374151;\n';
 
-  // Experience Layer
-  if (copilotArchitecture.experienceAgents.includes("2+")) {
-    mermaidCode += '  subgraph Experience["Experience Layer"]\n';
-    mermaidCode += '    Exp1[Web Agent]:::agent\n';
-    mermaidCode += '    Exp2[Teams Agent]:::agent\n';
-    mermaidCode += '  end\n';
-  } else {
-    mermaidCode += '  Exp1[Experience Agent]:::agent\n';
-  }
+  const activeAgents = agentArchitecture.filter(a => a.necessity !== 'Optional');
+  const archetypes = new Set(activeAgents.map(a => a.archetypeId));
 
-  // Value Stream Layer (Only for Large/Complex)
-  if (copilotArchitecture.valueStreamAgents.includes("Required") || tShirtSize === 'LARGE') {
-    mermaidCode += '  VS[Value Stream Agent]:::agent\n';
-    if (copilotArchitecture.experienceAgents.includes("2+")) {
-      mermaidCode += '  Exp1 --> VS\n';
-      mermaidCode += '  Exp2 --> VS\n';
-    } else {
-      mermaidCode += '  Exp1 --> VS\n';
-    }
-  }
-
-  // Function Layer
-  mermaidCode += '  subgraph Function["Function Layer"]\n';
-  if (copilotArchitecture.functionAgents.includes("3-5+") || tShirtSize === 'LARGE') {
-    mermaidCode += '    Func1[HR Function]:::agent\n';
-    mermaidCode += '    Func2[IT Function]:::agent\n';
-    mermaidCode += '    Func3[Finance Function]:::agent\n';
-  } else if (copilotArchitecture.functionAgents.includes("2-3") || tShirtSize === 'MEDIUM') {
-    mermaidCode += '    Func1[Primary Function]:::agent\n';
-    mermaidCode += '    Func2[Secondary Function]:::agent\n';
+  // 1. Experience Layer
+  mermaidCode += '  subgraph Experience["Experience Layer"]\n';
+  if (archetypes.has('user-facing-copilot')) {
+    mermaidCode += '    Exp1[User-Facing Copilot]:::agent\n';
   } else {
-    mermaidCode += '    Func1[Core Function]:::agent\n';
+    mermaidCode += '    Exp1[Standard Chat Interface]:::agent\n';
+  }
+  if (archetypes.has('memory-context')) {
+    mermaidCode += '    Mem[Memory Agent]:::agent\n';
+    mermaidCode += '    Exp1 -.-> Mem\n';
   }
   mermaidCode += '  end\n';
 
-  // Connect Value Stream (or Experience) to Function
-  const parentNode = (copilotArchitecture.valueStreamAgents.includes("Required") || tShirtSize === 'LARGE') ? 'VS' : 'Exp1';
-  mermaidCode += `  ${parentNode} --> Func1\n`;
-  if (tShirtSize !== 'SMALL') {
-    mermaidCode += `  ${parentNode} --> Func2\n`;
-    if (tShirtSize === 'LARGE') mermaidCode += `  ${parentNode} --> Func3\n`;
+  // 2. Value Stream / Orchestration Layer
+  let orchestratorNode = 'Exp1'; // Default parent if no orchestrator
+  if (archetypes.has('orchestrator') || archetypes.has('simulation-planning')) {
+    mermaidCode += '  subgraph Orchestration["Orchestration Layer"]\n';
+    if (archetypes.has('orchestrator')) {
+      mermaidCode += '    Orch[Orchestrator Agent]:::agent\n';
+      mermaidCode += '    Exp1 --> Orch\n';
+      orchestratorNode = 'Orch';
+    }
+    if (archetypes.has('simulation-planning')) {
+      mermaidCode += '    Sim[Simulation Agent]:::agent\n';
+      mermaidCode += '    Orch -.-> Sim\n';
+    }
+    mermaidCode += '  end\n';
   }
 
-  // Process Layer
-  if (copilotArchitecture.processAgents !== "0") {
-    mermaidCode += '  subgraph Process["Process Layer"]\n';
-    mermaidCode += '    Proc1[Process Agent]:::agent\n';
-    if (tShirtSize === 'LARGE') mermaidCode += '    Proc2[Complex Process]:::agent\n';
+  // 3. Domain / Function Layer
+  if (archetypes.has('specialist-domain') || archetypes.has('logical-reasoning')) {
+    mermaidCode += '  subgraph Domain["Domain Layer"]\n';
+    if (archetypes.has('specialist-domain')) {
+      mermaidCode += '    Spec[Specialist Agent]:::agent\n';
+      mermaidCode += `    ${orchestratorNode} --> Spec\n`;
+    }
+    if (archetypes.has('logical-reasoning')) {
+      mermaidCode += '    Logic[Reasoning Agent]:::agent\n';
+      mermaidCode += `    ${orchestratorNode} --> Logic\n`;
+    }
     mermaidCode += '  end\n';
+  }
+
+  // 4. Task / Integration Layer
+  if (archetypes.has('connector-integration') || archetypes.has('toolsmith-action')) {
+    mermaidCode += '  subgraph Task["Task Layer"]\n';
+    const parent = (archetypes.has('specialist-domain')) ? 'Spec' : orchestratorNode;
     
-    mermaidCode += '  Func1 --> Proc1\n';
-    if (tShirtSize === 'LARGE') mermaidCode += '  Func2 --> Proc2\n';
+    if (archetypes.has('connector-integration')) {
+      mermaidCode += '    Conn[Integration Agent]:::agent\n';
+      mermaidCode += `    ${parent} --> Conn\n`;
+    }
+    if (archetypes.has('toolsmith-action')) {
+      mermaidCode += '    Tool[Toolsmith Agent]:::agent\n';
+      mermaidCode += `    ${parent} --> Tool\n`;
+    }
+    mermaidCode += '  end\n';
   }
 
-  // Task Layer
-  mermaidCode += '  subgraph Task["Task Layer"]\n';
-  mermaidCode += '    Task1[Task Agent]:::agent\n';
-  mermaidCode += '    Task2[Task Agent]:::agent\n';
-  if (tShirtSize === 'LARGE') mermaidCode += '    Task3[Task Agent]:::agent\n';
-  mermaidCode += '  end\n';
-
-  // Connect Process (or Function) to Task
-  const taskParent = copilotArchitecture.processAgents !== "0" ? 'Proc1' : 'Func1';
-  mermaidCode += `  ${taskParent} --> Task1\n`;
-  mermaidCode += `  ${taskParent} --> Task2\n`;
-  if (tShirtSize === 'LARGE' && copilotArchitecture.processAgents !== "0") mermaidCode += '  Proc2 --> Task3\n';
-
-  // Control Layer
-  if (copilotArchitecture.controlAgents.includes("Required") || copilotArchitecture.controlAgents.includes("Recommended")) {
-    mermaidCode += '  Control[Control Agent]:::control\n';
-    // Control monitors Experience and Value Stream
-    mermaidCode += '  Control -.-> Exp1\n';
-    if (copilotArchitecture.valueStreamAgents.includes("Required") || tShirtSize === 'LARGE') {
-      mermaidCode += '  Control -.-> VS\n';
+  // 5. Control Layer
+  if (archetypes.has('governance-guardrail') || archetypes.has('meta-self-improving')) {
+    mermaidCode += '  subgraph Control["Control Layer"]\n';
+    if (archetypes.has('governance-guardrail')) {
+      mermaidCode += '    Gov[Governance Agent]:::control\n';
+      mermaidCode += '    Gov -.-> Exp1\n'; // Monitors entry
+      if (orchestratorNode !== 'Exp1') mermaidCode += `    Gov -.-> ${orchestratorNode}\n`;
     }
+    if (archetypes.has('meta-self-improving')) {
+      mermaidCode += '    Meta[Meta-Agent]:::control\n';
+      mermaidCode += `    Meta -.-> ${orchestratorNode}\n`;
+    }
+    mermaidCode += '  end\n';
   }
 
   return {
     type: DiagramType.AGENT_ARCHITECTURE,
     title: "Agent Architecture Diagram",
-    description: `Visual representation of the ${tShirtSize.toLowerCase()} sizing architecture.`,
+    description: `Visual representation of the ${tShirtSize.toLowerCase()} sizing architecture using specific agent archetypes.`,
     code: mermaidCode
   };
 }
 
 export function buildGovernanceMermaid(result: SizingResult, scores: ScoresRecord): DiagramDefinition {
-  const { copilotArchitecture } = result;
+  const { agentArchitecture } = result;
   const dataSensitivity = scores[DimensionId.DataSensitivity] || 0;
   const userReach = scores[DimensionId.UserReach] || 0;
   const isHighRisk = dataSensitivity >= 3 || userReach >= 3;
+
+  const activeAgents = agentArchitecture.filter(a => a.necessity !== 'Optional');
+  const archetypes = new Set(activeAgents.map(a => a.archetypeId));
+  const hasGovernance = archetypes.has('governance-guardrail') || isHighRisk;
 
   let mermaidCode = 'graph TD\n';
   mermaidCode += '  classDef user fill:#f3f4f6,stroke:#6b7280,stroke-width:1px,color:#374151,shape:circle;\n';
@@ -190,8 +200,8 @@ export function buildGovernanceMermaid(result: SizingResult, scores: ScoresRecor
   mermaidCode += '  Agent[Copilot Agent]:::agent\n';
   
   // Control Layer
-  if (copilotArchitecture.controlAgents.includes("Required") || isHighRisk) {
-    mermaidCode += '  Control[Control Agent / Guardrails]:::control\n';
+  if (hasGovernance) {
+    mermaidCode += '  Control[Governance Agent]:::control\n';
     mermaidCode += '  User --> Control\n';
     mermaidCode += '  Control --> Agent\n';
     mermaidCode += '  Agent -.-> Control\n';
@@ -228,71 +238,89 @@ export function buildGovernanceMermaid(result: SizingResult, scores: ScoresRecor
 }
 
 export function getExperienceAgentDiagram(result: SizingResult): string {
-  const isComplex = result.tShirtSize === 'LARGE';
+  const { agentArchitecture } = result;
+  const archetypes = new Set(agentArchitecture.map(a => a.archetypeId));
+  const hasMemory = archetypes.has('memory-context');
+  
   let code = 'sequenceDiagram\n';
   code += '  actor User\n';
-  code += '  participant Exp as Experience Agent\n';
+  code += '  participant Exp as User-Facing Copilot\n';
   
-  if (isComplex) {
-    code += '  participant Router as Topic Router\n';
-    code += '  participant Auth as Auth Service\n';
+  if (hasMemory) {
+    code += '  participant Mem as Memory Agent\n';
   }
   
-  code += '  participant VS as Value Stream Agent\n';
+  code += '  participant Orch as Orchestrator\n';
   
   code += '  User->>Exp: Sends Query\n';
-  if (isComplex) {
-    code += '  Exp->>Auth: Validate Session\n';
-    code += '  Auth-->>Exp: Session Valid\n';
-    code += '  Exp->>Router: Analyze Intent\n';
-    code += '  Router-->>Exp: Intent: "Order Status"\n';
+  if (hasMemory) {
+    code += '  Exp->>Mem: Retrieve Context\n';
+    code += '  Mem-->>Exp: Context Object\n';
   }
-  code += '  Exp->>VS: Delegate "Order Status"\n';
-  code += '  VS-->>Exp: Return Status Details\n';
+  
+  code += '  Exp->>Orch: Delegate Intent\n';
+  code += '  Orch-->>Exp: Return Result\n';
+  
+  if (hasMemory) {
+    code += '  Exp->>Mem: Update Context\n';
+  }
+  
   code += '  Exp->>User: Format & Send Response\n';
   
   return code;
 }
 
 export function getValueStreamAgentDiagram(result: SizingResult): string {
-  const isComplex = result.tShirtSize === 'LARGE';
+  const { agentArchitecture } = result;
+  const archetypes = new Set(agentArchitecture.map(a => a.archetypeId));
+  const hasSimulation = archetypes.has('simulation-planning');
+
   let code = 'graph TD\n';
   code += '  Start((Start)) --> Init[Initialize Context]\n';
-  code += '  Init --> Plan{Planning}\n';
+  code += '  Init --> Plan{Orchestrator Planning}\n';
   
-  if (isComplex) {
-    code += '  Plan -->|Complex| Decomp[Decompose Request]\n';
-    code += '  Decomp --> Coord[Coordinate Sub-Agents]\n';
-    code += '  Coord --> Agg[Aggregate Results]\n';
+  if (hasSimulation) {
+    code += '  Plan -->|High Stakes| Sim[Run Simulation]\n';
+    code += '  Sim --> Eval{Evaluate Risk}\n';
+    code += '  Eval -- Safe --> Exec[Execute Plan]\n';
+    code += '  Eval -- Risky --> Replan[Adjust Plan]\n';
+    code += '  Replan --> Sim\n';
   } else {
-    code += '  Plan -->|Simple| Exec[Execute Logic]\n';
+    code += '  Plan -->|Standard| Exec[Execute Plan]\n';
   }
   
-  code += '  Agg --> Review[Review Output]\n';
-  code += '  Exec --> Review\n';
+  code += '  Exec --> Review[Review Output]\n';
   code += '  Review --> End((End))\n';
   
   return code;
 }
 
 export function getFunctionAgentDiagram(result: SizingResult): string {
-  const isComplex = result.tShirtSize === 'LARGE';
+  const { agentArchitecture } = result;
+  const archetypes = new Set(agentArchitecture.map(a => a.archetypeId));
+  const hasReasoning = archetypes.has('logical-reasoning');
+
   let code = 'graph LR\n';
   code += '  Input[Structured Input] --> Validate{Validate}\n';
   code += '  Validate -- Invalid --> Error[Return Error]\n';
-  code += '  Validate -- Valid --> Calc[Perform Calculation]\n';
   
-  if (isComplex) {
-    code += '  Calc --> Enrich[Enrich Data]\n';
-    code += '  Enrich --> Output[Return Result]\n';
+  if (hasReasoning) {
+    code += '  Validate -- Valid --> CoT[Chain of Thought]\n';
+    code += '  CoT --> Step1[Step 1: Analyze]\n';
+    code += '  Step1 --> Step2[Step 2: Deduce]\n';
+    code += '  Step2 --> Output[Return Conclusion]\n';
   } else {
-    code += '  Calc --> Output[Return Result]\n';
+    code += '  Validate -- Valid --> Retrieve[Retrieve Knowledge]\n';
+    code += '  Retrieve --> Output[Return Answer]\n';
   }
   return code;
 }
 
 export function getProcessAgentDiagram(result: SizingResult): string {
-  const isComplex = result.tShirtSize === 'LARGE';
+  const { agentArchitecture } = result;
+  const archetypes = new Set(agentArchitecture.map(a => a.archetypeId));
+  const isComplex = archetypes.has('orchestrator') || result.tShirtSize === 'LARGE';
+
   let code = 'stateDiagram-v2\n';
   code += '  [*] --> Idle\n';
   code += '  Idle --> Active: Trigger Received\n';
@@ -312,45 +340,53 @@ export function getProcessAgentDiagram(result: SizingResult): string {
 }
 
 export function getTaskAgentDiagram(result: SizingResult): string {
-  const needsAuth = result.tShirtSize !== 'SMALL';
+  const { agentArchitecture } = result;
+  const archetypes = new Set(agentArchitecture.map(a => a.archetypeId));
+  const isToolsmith = archetypes.has('toolsmith-action');
+
   let code = 'graph TD\n';
   code += '  Req[Request] --> ';
   
-  if (needsAuth) {
-    code += 'Auth{Authorized?}\n';
-    code += '  Auth -- No --> Deny[Deny Access]\n';
-    code += '  Auth -- Yes --> API[Call External API]\n';
+  if (isToolsmith) {
+    code += 'Select{Select Tool}\n';
+    code += '  Select --> ToolA[Tool A]\n';
+    code += '  Select --> ToolB[Tool B]\n';
+    code += '  ToolA --> Exec[Execute]\n';
+    code += '  ToolB --> Exec\n';
   } else {
-    code += 'API[Call External API]\n';
+    code += 'Map[Map Parameters]\n';
+    code += '  Map --> API[Call External API]\n';
+    code += '  API --> Exec[Parse Response]\n';
   }
   
-  code += '  API --> Parse[Parse Response]\n';
-  code += '  Parse --> Resp[Return Data]\n';
+  code += '  Exec --> Resp[Return Data]\n';
   return code;
 }
 
 export function getControlAgentDiagram(result: SizingResult): string {
-  const strict = result.tShirtSize === 'LARGE';
+  const { agentArchitecture } = result;
+  const archetypes = new Set(agentArchitecture.map(a => a.archetypeId));
+  const hasMeta = archetypes.has('meta-self-improving');
+
   let code = 'sequenceDiagram\n';
   code += '  participant Agent as Source Agent\n';
-  code += '  participant Control as Control Agent\n';
-  code += '  participant Policy as Policy Engine\n';
-  code += '  participant Audit as Audit Log\n';
+  code += '  participant Gov as Governance Agent\n';
   
-  code += '  Agent->>Control: Submit Content for Review\n';
-  code += '  Control->>Policy: Check Compliance Rules\n';
-  code += '  Policy-->>Control: Rule Result (Pass/Fail)\n';
-  
-  if (strict) {
-    code += '  Control->>Audit: Log Event (Detailed)\n';
-  } else {
-    code += '  Control->>Audit: Log Event\n';
+  if (hasMeta) {
+    code += '  participant Meta as Meta-Agent\n';
   }
   
-  code += '  alt Passed\n';
-  code += '    Control-->>Agent: Approved\n';
-  code += '  else Failed\n';
-  code += '    Control-->>Agent: Rejected (Reason)\n';
+  code += '  Agent->>Gov: Submit Content\n';
+  code += '  Gov->>Gov: Check PII & Safety\n';
+  
+  code += '  alt Violation\n';
+  code += '    Gov-->>Agent: Blocked\n';
+  code += '  else Safe\n';
+  code += '    Gov-->>Agent: Approved\n';
+  if (hasMeta) {
+    code += '    Gov->>Meta: Log Interaction\n';
+    code += '    Meta->>Meta: Analyze Performance\n';
+  }
   code += '  end\n';
   return code;
 }

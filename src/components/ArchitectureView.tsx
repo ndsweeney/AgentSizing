@@ -5,6 +5,8 @@ import { getAllArchitectureDiagrams, type ArchitectureContext } from '../domain/
 import { copyToClipboard } from '../utils/export';
 import { cn } from '../utils/cn';
 import type { SizingResult } from '../domain/types';
+import { getArchetypeById } from '../data/agentArchetypes';
+import { useRulesStore } from '../state/rulesStore';
 
 interface ArchitectureViewProps {
   result: SizingResult;
@@ -33,6 +35,8 @@ function ArchitectureCard({ title, value, className }: { title: string, value: s
 }
 
 export function ArchitectureView({ result, scenarioName, industry, systems, recommendations }: ArchitectureViewProps) {
+  const { sizingThresholds, riskThresholds } = useRulesStore();
+  const rulesConfig = { sizingThresholds, riskThresholds };
   const context: ArchitectureContext = { scenarioName, industry, systems };
   const diagrams = getAllArchitectureDiagrams(context, result);
   const [activeTab, setActiveTab] = useState<'recommendations' | number>('recommendations');
@@ -133,22 +137,32 @@ export function ArchitectureView({ result, scenarioName, industry, systems, reco
             <div>
               <h4 className="text-sm font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">Agent Roles & Necessity</h4>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {result.agentArchitecture.map((agent) => (
-                  <div key={agent.type} className="p-4 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/30 flex flex-col h-full">
-                    <div className="flex items-start justify-between mb-2">
-                      <h4 className="font-semibold text-gray-900 dark:text-white text-sm">{agent.type}</h4>
-                      <span className={cn(
-                        "text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border",
-                        getNecessityColor(agent.necessity)
-                      )}>
-                        {agent.necessity === 'Definitely needed' ? 'Required' : agent.necessity}
-                      </span>
+                {result.agentArchitecture.map((agent) => {
+                  const archetype = getArchetypeById(agent.archetypeId, rulesConfig);
+                  return (
+                    <div key={agent.type} className="p-4 rounded-lg border border-gray-200 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/30 flex flex-col h-full">
+                      <div className="flex items-start justify-between mb-2">
+                        <div>
+                          <h4 className="font-semibold text-gray-900 dark:text-white text-sm">{agent.type}</h4>
+                          {archetype && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                              <span className="capitalize">{archetype.tier}</span> – {archetype.name}
+                            </p>
+                          )}
+                        </div>
+                        <span className={cn(
+                          "text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border ml-2 flex-shrink-0",
+                          getNecessityColor(agent.necessity)
+                        )}>
+                          {agent.necessity === 'Definitely needed' ? 'Required' : agent.necessity}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-auto leading-relaxed">
+                        {agent.reason}
+                      </p>
                     </div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-auto leading-relaxed">
-                      {agent.reason}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 

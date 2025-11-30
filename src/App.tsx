@@ -12,6 +12,7 @@ import { CoachModeOverlay } from './components/CoachModeOverlay';
 import { ReportPrintView } from './components/ReportPrintView';
 import { WorkshopIntake } from './components/WorkshopIntake';
 import { TemplateSelector } from './components/TemplateSelector';
+import { SystemReferenceView } from './components/SystemReferenceView';
 
 function App() {
   // Check for print mode immediately
@@ -309,30 +310,22 @@ function App() {
         </div>
       )}
 
-      <TemplateSelector 
-        isOpen={showTemplates} 
-        onClose={() => setShowTemplates(false)}
-        onSelect={(template) => {
-          createFromTemplate(template);
-          setShowTemplates(false);
-          setView('results');
-        }}
-      />
+      {view === 'wizard' && <QuestionWizard onComplete={handleComplete} />}
+      {view === 'results' && <ResultsView onRestart={handleRestart} onEdit={handleEdit} />}
+      {view === 'portfolio' && <PortfolioView onBack={() => setView('intro')} />}
+      {view === 'knowledge' && <KnowledgeHub />}
+      {view === 'reference' && <SystemReferenceView />}
 
-      {view === 'portfolio' && (
-        <PortfolioView onBack={() => setView('intro')} />
-      )}
-
-      {view === 'knowledge' && (
-        <KnowledgeHub />
-      )}
-
-      {view === 'wizard' && (
-        <QuestionWizard onComplete={handleComplete} />
-      )}
-
-      {view === 'results' && (
-        <ResultsView onRestart={handleRestart} onEdit={handleEdit} />
+      {showTemplates && (
+        <TemplateSelector 
+          isOpen={showTemplates} 
+          onClose={() => setShowTemplates(false)}
+          onSelect={(template) => {
+            createFromTemplate(template);
+            setShowTemplates(false);
+            setView('results');
+          }}
+        />
       )}
     </Layout>
   )

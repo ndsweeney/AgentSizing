@@ -659,28 +659,62 @@ A client-side React + TypeScript tool to help consultants and customers size Cop
   - Generate full report for sample scenario
   - Validate ZIP structure
   - Validate Markdown structure
-### Report Module F — PDF Export
+### Report Module F — HTML Print View (replace PDF)
 
-- [x] Choose PDF generation approach:
-  - [x] Client-side library (e.g. jsPDF, pdf-lib, or html2pdf.js)
-  - [x] Use existing Markdown renderer as source (Markdown → HTML/text → PDF)
+- [ ] Remove PDF-specific code
+  - [ ] Delete `renderPdf.ts` (and any PDF-only helper modules)
+  - [ ] Remove PDF-related imports from `ReportGeneratorView` (or equivalent)
+  - [ ] Remove npm deps used *only* for PDF (e.g. jspdf, html2pdf, pdf-lib) from package.json
 
-- [x] Create `src/report/renderPdf.ts`:
-  - [x] Accept `ReportModel`
-  - [x] Reuse `renderReportMarkdown` (or HTML equivalent) as the content source
-  - [x] Convert to paginated PDF:
-    - [x] Add cover page
-    - [x] Add section headings with clear page breaks
-    - [x] Reasonable margins & fonts
-  - [x] Return a `Blob` suitable for client-side download
+- [ ] Create HTML print view
+  - [ ] Add `ReportPrintView.tsx` that:
+    - [ ] Accepts a scenarioId or uses the active scenario
+    - [ ] Calls `buildReportModel` to get the full report
+    - [ ] Renders a full-page, print-friendly HTML version of the report
+    - [ ] Hides app chrome (sidebars, nav, buttons)
+  - [ ] Add a dedicated route or view for the print page (e.g. `/report/print/:scenarioId`)
 
-- [x] Update `ReportGeneratorView`:
-  - [x] Add “Download PDF” button
-  - [x] Wire it to `renderPdf` and trigger browser download
+- [ ] Print CSS
+  - [ ] Add `@media print` styles in a global stylesheet or CSS module to:
+    - [ ] Hide navigation, buttons, headers/footers you don’t want
+    - [ ] Set page size to A4 (or Letter) with sensible margins
+    - [ ] Ensure `img, svg, .diagram-block` use `max-width: 100%; height: auto;` and `page-break-inside: avoid;`
+    - [ ] Add `.page-break` utility class with `page-break-before: always;`
 
-- [x] Ensure:
-  - [x] Large reports still export without crashing
-  - [x] Graceful fallback if PDF generation fails (show error toast)
+- [ ] Wire into Report UI
+  - [ ] In `ReportGeneratorView`, replace “Download PDF” button with:
+    - [ ] “Open Print View” button that:
+      - [ ] Either navigates to `/report/print/:scenarioId` in same tab
+      - [ ] Or opens a new tab/window for the print view
+  - [ ] Optionally add a “Print” button *inside* `ReportPrintView` that calls `window.print()`
 
-- [x] Update exports:
-  - [x] Include PDF option in export modal/info
+- [ ] Cleanup & testing
+  - [ ] Confirm report still exports Markdown / JSON / ZIP
+  - [ ] Confirm “Print View” renders all sections correctly
+  - [ ] Test browser “Print → Save as PDF” produces a clean PDF with no clipped diagrams or nav
+
+### 16. Reference Page Enhancements
+- [x] Update `src/components/SystemReferenceView.tsx` to add "Scoring Logic" and "Risk & Governance" tabs.
+- [x] Implement "Scoring Logic" tab to display T-Shirt sizing thresholds and dimension drivers.
+- [x] Implement "Risk & Governance" tab to display Risk Matrix and Governance Trigger rules.
+- [x] Implement "Cost Models" tab with default assumptions.
+- [x] Refactor `src/domain/rules.ts` to export `SIZING_THRESHOLDS`, `RISK_THRESHOLDS`, and `GOVERNANCE_RULES` constants.
+- [x] Update `src/domain/scoring.ts` to use centralized rules.
+- [x] Update `src/data/agentArchetypes.ts` to use centralized constants.
+- [x] Update `src/components/SystemReferenceView.tsx` to use centralized constants.
+
+### 17. Dynamic Logic Configuration (Refactor)
+- [x] Create `RulesConfig` interface and store slice
+- [x] Refactor `rules.ts` to use dynamic `evaluateRule` engine
+- [x] Refactor `scoring.ts` to use dynamic `riskRules`
+- [x] Refactor `costs.ts` to use dynamic `costDrivers` and `costAssumptions`
+- [x] Refactor `tests.ts` to use dynamic `testPlanTemplates`
+- [x] Refactor `governance.ts` to use dynamic `governanceRules`
+- [x] Create `JsonConfigEditor` for admin UI (Deprecated/Removed)
+- [x] Update `SystemReferenceView` to include editors for all logic slices
+- [x] Wire up all consumer components to use `useRulesConfig`
+- [x] Add ROI Assumptions to System Reference View and Rules Store
+
+- [x] Replace JSON editors with form-based inputs for ROI, Costs, and Thresholds
+- [x] Replace JSON editors with form-based inputs for Cost Drivers and Archetype Triggers
+- [x] Replace JSON editors with form-based inputs for Risk Rules, Governance Rules, and Test Plans

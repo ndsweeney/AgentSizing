@@ -6,7 +6,7 @@ import { DIMENSIONS } from '../domain/scoring';
 import { cn } from '../utils/cn';
 
 interface CoachModeOverlayProps {
-  view: 'intro' | 'wizard' | 'results' | 'portfolio' | 'knowledge';
+  view: 'intro' | 'wizard' | 'results' | 'portfolio' | 'knowledge' | 'reference';
 }
 
 export function CoachModeOverlay({ view }: CoachModeOverlayProps) {

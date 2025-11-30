@@ -37,20 +37,31 @@ export interface DimensionScore extends DimensionMetadata {
   value: ScoreValue | null;
 }
 
-export type AgentType = 
-  | "Experience Agents"
-  | "Value Stream Agents"
-  | "Function Agents"
-  | "Process Agents"
-  | "Task Agents"
-  | "Control Agents";
+export type AgentType = string;
+// | "Experience Agents"
+// | "Value Stream Agents"
+// | "Function Agents"
+// | "Process Agents"
+// | "Task Agents"
+// | "Control Agents";
 
 export type AgentNecessity = "Definitely needed" | "Recommended" | "Optional";
 
 export interface AgentRecommendation {
   type: AgentType;
+  archetypeId: string;
   necessity: AgentNecessity;
   reason: string;
+}
+
+export interface TestCase {
+  id: string;
+  title: string;
+  agentType: AgentType;
+  description: string;
+  input: string;
+  expectedOutput: string;
+  edgeCases: string[];
 }
 
 export interface CopilotArchitectureSpec {
@@ -70,6 +81,7 @@ export interface SizingResult {
   recommendedAgentPattern: string[];
   agentArchitecture: AgentRecommendation[];
   copilotArchitecture: CopilotArchitectureSpec;
+  testCases: TestCase[];
 }
 
 export interface RecommendationResult {
@@ -95,6 +107,7 @@ export interface RiskProfile {
 
 export interface AgentSpec {
   type: AgentType;
+  archetypeId: string;
   title: string;
   purpose: string;
   inputs: string[];

@@ -6,16 +6,19 @@ import { calculateSizingResult } from '../domain/scoring';
 import { DollarSign, Settings, Info, TrendingUp, Clock, Target, BarChart3 } from 'lucide-react';
 import { cn } from '../utils/cn';
 
+import { useRulesConfig } from '../hooks/useRulesConfig';
+
 export function CostView() {
   const { scores, scenario } = useActiveScenario();
   const { updateCostAssumptions, updateBenefitAssumptions, isReadOnly } = useSizingStore();
   const [showSettings, setShowSettings] = useState(false);
+  const rulesConfig = useRulesConfig();
 
   // Fallback to default assumptions if not present in scenario (e.g. old data)
-  const activeAssumptions = scenario.costAssumptions || DEFAULT_COST_ASSUMPTIONS;
-  const activeBenefitAssumptions = scenario.benefitAssumptions || DEFAULT_BENEFIT_ASSUMPTIONS;
+  const activeAssumptions = scenario.costAssumptions || rulesConfig.costAssumptions || DEFAULT_COST_ASSUMPTIONS;
+  const activeBenefitAssumptions = scenario.benefitAssumptions || rulesConfig.benefitAssumptions || DEFAULT_BENEFIT_ASSUMPTIONS;
 
-  const result = calculateSizingResult(scores);
+  const result = calculateSizingResult(scores, rulesConfig);
   const costs = calculateDetailedCosts(result, scores, activeAssumptions);
   const roi = calculateRoi(activeBenefitAssumptions, costs.totalOneTime, costs.totalMonthly);
 

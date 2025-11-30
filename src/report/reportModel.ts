@@ -10,7 +10,8 @@ import type { RoiResult } from '../domain/roi';
 import type { ValueRoadmap } from '../domain/roadmap';
 import type { DeliveryPlan } from '../domain/delivery';
 import type { KnowledgeItem } from '../domain/knowledge';
-import type { PromptDefinition, TestPlanItem, StarterPackItem, DebuggerConfig } from '../domain/reportingExtras';
+import type { TestPlanItem, StarterPackItem, DebuggerConfig } from '../domain/reportingExtras';
+import type { PromptTemplate } from '../domain/prompts';
 
 export interface ReportModel {
   scenario: Scenario;
@@ -27,7 +28,7 @@ export interface ReportModel {
   };
   blueprints?: string[]; // Markdown content
   topicSkeletons?: TopicSkeleton[];
-  prompts?: PromptDefinition[];
+  prompts?: PromptTemplate[];
   diagrams?: {
     agentFlow?: DiagramDefinition;
     systemIntegration?: DiagramDefinition;

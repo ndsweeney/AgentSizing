@@ -1,4 +1,6 @@
 import type { SizingResult } from './types';
+import type { RulesConfig } from './rules';
+import { DEFAULT_COST_DRIVERS } from './defaults';
 
 export interface CostEstimate {
   implementation: {
@@ -16,7 +18,8 @@ export interface CostEstimate {
   };
 }
 
-export function calculateEstimatedCosts(result: SizingResult): CostEstimate {
+export function calculateEstimatedCosts(result: SizingResult, rulesConfig?: RulesConfig): CostEstimate {
+  const drivers = rulesConfig?.costDrivers || DEFAULT_COST_DRIVERS;
   let implMin = 0;
   let implMax = 0;
   let licensing = 0;
@@ -24,28 +27,27 @@ export function calculateEstimatedCosts(result: SizingResult): CostEstimate {
   let support = 0;
 
   // Base estimates on T-Shirt Size
-  switch (result.tShirtSize) {
-    case 'SMALL':
-      implMin = 40000;
-      implMax = 80000;
-      licensing = 12000; // ~$1k/mo
-      azure = 6000;      // ~$500/mo
-      support = 10000;
-      break;
-    case 'MEDIUM':
-      implMin = 120000;
-      implMax = 250000;
-      licensing = 60000; // ~$5k/mo
-      azure = 24000;     // ~$2k/mo
-      support = 40000;
-      break;
-    case 'LARGE':
-      implMin = 400000;
-      implMax = 800000;
-      licensing = 180000; // ~$15k/mo
-      azure = 60000;      // ~$5k/mo
-      support = 120000;
-      break;
+  if (result.tShirtSize === 'SMALL') {
+    const d = drivers.tShirtSize.SMALL;
+    implMin = d.implMin;
+    implMax = d.implMax;
+    licensing = d.licensing;
+    azure = d.azure;
+    support = d.support;
+  } else if (result.tShirtSize === 'MEDIUM') {
+    const d = drivers.tShirtSize.MEDIUM;
+    implMin = d.implMin;
+    implMax = d.implMax;
+    licensing = d.licensing;
+    azure = d.azure;
+    support = d.support;
+  } else if (result.tShirtSize === 'LARGE') {
+    const d = drivers.tShirtSize.LARGE;
+    implMin = d.implMin;
+    implMax = d.implMax;
+    licensing = d.licensing;
+    azure = d.azure;
+    support = d.support;
   }
 
   // Adjust based on specific complexity drivers

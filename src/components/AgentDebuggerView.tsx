@@ -7,9 +7,12 @@ import { MermaidDiagram } from './MermaidDiagram';
 import { cn } from '../utils/cn';
 import { downloadJson } from '../utils/export';
 
+import { useRulesConfig } from '../hooks/useRulesConfig';
+
 export function AgentDebuggerView() {
   const { scores } = useActiveScenario();
-  const result = calculateSizingResult(scores);
+  const rulesConfig = useRulesConfig();
+  const result = calculateSizingResult(scores, rulesConfig);
   
   const [mode, setMode] = useState<SimulationMode>('happy-path');
   const [trace, setTrace] = useState<SimulationTrace | null>(null);
@@ -55,8 +58,8 @@ export function AgentDebuggerView() {
             </p>
           </div>
           
-          <div className="flex items-center gap-3">
-            <div className="flex bg-gray-100 dark:bg-slate-700 p-1 rounded-lg">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-wrap bg-gray-100 dark:bg-slate-700 p-1 rounded-lg">
               {(['happy-path', 'error-path', 'escalation-path'] as SimulationMode[]).map((m) => (
                 <button
                   key={m}

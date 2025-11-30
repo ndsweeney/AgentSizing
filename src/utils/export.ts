@@ -1,7 +1,7 @@
 import { DIMENSIONS, type SizingResult, type ScoresRecord, calculateRiskProfile } from '../domain/scoring';
 import { getGovernanceChecklist } from '../domain/rules';
 import { buildAgentArchitectureMermaid, buildSystemIntegrationMermaid, buildGovernanceMermaid } from '../domain/diagrams';
-import { generatePrompts } from '../domain/prompts';
+import { generatePrompts, type PromptTemplateConfig } from '../domain/prompts';
 import { getConnectorsForSystem, type ConnectorDefinition } from '../domain/connectors';
 import { generateTestPlan } from '../domain/tests';
 import { generateGovernancePack } from '../domain/governance';
@@ -26,7 +26,8 @@ export function generateMarkdown(
   comparison?: { targetResult: SizingResult | null, targetScores: ScoresRecord },
   systems?: string[],
   costAssumptions: CostAssumptions = DEFAULT_COST_ASSUMPTIONS,
-  benefitAssumptions: BenefitAssumptions = DEFAULT_BENEFIT_ASSUMPTIONS
+  benefitAssumptions: BenefitAssumptions = DEFAULT_BENEFIT_ASSUMPTIONS,
+  promptTemplates?: Record<string, PromptTemplateConfig>
 ): string {
   const date = new Date().toLocaleDateString();
   
@@ -130,7 +131,7 @@ ${governancePack.requirements.map(r => `- [${r.priority}] **${r.title}**: ${r.de
 
 
 ## LLM Prompts Library
-${generatePrompts(result).map(p => `### ${p.title}
+${generatePrompts(result, promptTemplates).map(p => `### ${p.title}
 **Agent Type:** ${p.agentType}
 **Description:** ${p.description}
 

@@ -18,6 +18,7 @@ export function renderReportMarkdown(report: ReportModel): string {
     renderRoi(report),
     renderValueRoadmap(report),
     renderDeliveryPlan(report),
+    renderPrompts(report),
     renderKnowledgeHub(report),
     renderMetadata(report)
   ];
@@ -238,6 +239,22 @@ function renderDeliveryPlan(report: ReportModel): string {
 ### Phases
 ${report.deliveryPlan.phases.map(p => `#### ${p.name} (${p.duration})
 ${p.epics.map(e => `- **${e.title}**: ${e.description}`).join('\n')}
+`).join('\n')}
+`;
+}
+
+function renderPrompts(report: ReportModel): string {
+  if (!report.prompts || report.prompts.length === 0) return '## System Prompts\n\n*No prompts generated.*';
+
+  return `## System Prompts
+${report.prompts.map(p => `### ${p.title}
+**Agent Type:** ${p.agentType}
+**Description:** ${p.description}
+
+**System Prompt:**
+\`\`\`
+${p.systemPrompt}
+\`\`\`
 `).join('\n')}
 `;
 }

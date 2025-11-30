@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { ArrowLeft, Download, Search, ArrowUpDown, Calendar, Building2, Tag, Users } from 'lucide-react';
 import { useSizingStore } from '../state/sizingStore';
+import { useRulesStore } from '../state/rulesStore';
 import { calculateSizingResult, DIMENSIONS } from '../domain/scoring';
 import { downloadJson } from '../utils/export';
 import { cn } from '../utils/cn';
@@ -17,6 +18,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 export function PortfolioView({ onBack }: PortfolioViewProps) {
   const { scenarios, setActiveScenario, setView } = useSizingStore();
+  const { sizingThresholds, riskThresholds } = useRulesStore();
   const [filterText, setFilterText] = useState('');
   const [sortField, setSortField] = useState<'date' | 'size'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -25,7 +27,7 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
   // Process data for charts and list
   const processedData = useMemo(() => {
     return scenarios.map(scenario => {
-      const result = calculateSizingResult(scenario.scores);
+      const result = calculateSizingResult(scenario.scores, { sizingThresholds, riskThresholds });
       return {
         ...scenario,
         tShirtSize: result.tShirtSize,
@@ -34,7 +36,7 @@ export function PortfolioView({ onBack }: PortfolioViewProps) {
         timestamp: scenario.lastUpdated
       };
     });
-  }, [scenarios]);
+  }, [scenarios, sizingThresholds, riskThresholds]);
 
   // Filter and Sort
   const filteredScenarios = useMemo(() => {

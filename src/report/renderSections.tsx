@@ -214,14 +214,13 @@ export function renderBuildSection(report: ReportModel) {
             {report.prompts.map((prompt, i) => (
               <div key={i} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-bold text-blue-700">{prompt.role}</span>
-                  <div className="flex gap-2">
-                    {prompt.variables.map(v => (
-                      <span key={v} className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600 font-mono">{v}</span>
-                    ))}
-                  </div>
+                  <span className="font-bold text-blue-700">{prompt.title}</span>
+                  <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600 font-mono">{prompt.agentType}</span>
                 </div>
-                <p className="text-sm text-gray-600 italic">"{prompt.content}"</p>
+                <p className="text-sm text-gray-600 mb-2">{prompt.description}</p>
+                <pre className="whitespace-pre-wrap text-xs font-mono text-gray-700 bg-gray-50 p-2 rounded border border-gray-100">
+                  {prompt.systemPrompt}
+                </pre>
               </div>
             ))}
           </div>

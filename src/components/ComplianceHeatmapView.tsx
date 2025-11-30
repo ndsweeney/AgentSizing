@@ -5,9 +5,12 @@ import { generateComplianceHeatmap } from '../domain/compliance';
 import { downloadJson } from '../utils/export';
 import { cn } from '../utils/cn';
 
+import { useRulesConfig } from '../hooks/useRulesConfig';
+
 export function ComplianceHeatmapView() {
   const { scores } = useActiveScenario();
-  const result = calculateSizingResult(scores);
+  const rulesConfig = useRulesConfig();
+  const result = calculateSizingResult(scores, rulesConfig);
   const data = generateComplianceHeatmap(result);
 
   const handleExport = () => {

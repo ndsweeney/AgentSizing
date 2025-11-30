@@ -4,12 +4,16 @@ import { generateAllBlueprints } from '../domain/blueprints';
 import { copyToClipboard } from '../utils/export'; // I might need a downloadText or similar
 import { cn } from '../utils/cn';
 import type { SizingResult } from '../domain/types';
+import { getAgentArchetypes } from '../data/agentArchetypes';
+import { useRulesStore } from '../state/rulesStore';
 
 interface BlueprintsViewProps {
   result: SizingResult;
 }
 
 export function BlueprintsView({ result }: BlueprintsViewProps) {
+  const { sizingThresholds, riskThresholds } = useRulesStore();
+  const agentArchetypes = getAgentArchetypes({ sizingThresholds, riskThresholds });
   const blueprints = generateAllBlueprints(result);
   const [activeBlueprintIndex, setActiveBlueprintIndex] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -80,7 +84,17 @@ export function BlueprintsView({ result }: BlueprintsViewProps) {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Toolbar */}
         <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-          <h2 className="font-semibold text-gray-900 dark:text-white">{activeBlueprint.title}</h2>
+          <div>
+            <h2 className="font-semibold text-gray-900 dark:text-white">{activeBlueprint.title}</h2>
+            {(() => {
+              const archetype = agentArchetypes.find(a => a.id === activeBlueprint.archetypeId);
+              return archetype ? (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  <span className="capitalize">{archetype.tier}</span> – {archetype.name}
+                </p>
+              ) : null;
+            })()}
+          </div>
           <div className="flex items-center gap-2">
             <button
               onClick={handleCopy}

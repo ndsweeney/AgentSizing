@@ -7,7 +7,7 @@ import type { IndustryTemplate } from '../templates';
 import { type MaturityLevel, MATURITY_DIMENSIONS } from '../domain/maturity';
 
 export type AssessmentMode = 'single' | 'compare';
-export type ViewState = 'intro' | 'wizard' | 'results' | 'portfolio' | 'knowledge';
+export type ViewState = 'intro' | 'wizard' | 'results' | 'portfolio' | 'knowledge' | 'reference';
 
 export interface Scenario {
   id: string;

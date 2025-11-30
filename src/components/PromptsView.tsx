@@ -4,13 +4,17 @@ import { generatePrompts } from '../domain/prompts';
 import { copyToClipboard } from '../utils/export';
 import { cn } from '../utils/cn';
 import type { SizingResult } from '../domain/types';
+import { getAgentArchetypes } from '../data/agentArchetypes';
+import { useRulesStore } from '../state/rulesStore';
 
 interface PromptsViewProps {
   result: SizingResult;
 }
 
 export function PromptsView({ result }: PromptsViewProps) {
-  const prompts = generatePrompts(result);
+  const { sizingThresholds, riskThresholds, promptTemplates } = useRulesStore();
+  const agentArchetypes = getAgentArchetypes({ sizingThresholds, riskThresholds });
+  const prompts = generatePrompts(result, promptTemplates);
   const [activeIndex, setActiveIndex] = useState(0);
   const [copied, setCopied] = useState(false);
 
@@ -69,6 +73,15 @@ export function PromptsView({ result }: PromptsViewProps) {
         <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           <div>
             <h2 className="font-semibold text-gray-900 dark:text-white">{activePrompt.title}</h2>
+            {(() => {
+              const agent = result.agentArchitecture.find(a => a.type === activePrompt.agentType);
+              const archetype = agent ? agentArchetypes.find(a => a.id === agent.archetypeId) : null;
+              return archetype ? (
+                <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium mb-0.5">
+                  {archetype.tier === 'core' ? 'Core' : 'Extended'} – {archetype.name}
+                </p>
+              ) : null;
+            })()}
             <p className="text-xs text-gray-500 dark:text-slate-400">{activePrompt.description}</p>
           </div>
           <button

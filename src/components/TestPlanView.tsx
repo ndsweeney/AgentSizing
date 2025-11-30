@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import { Copy, Download, FlaskConical, CheckCircle2, AlertTriangle, ShieldAlert } from 'lucide-react';
-import { generateTestPlan, type TestCase } from '../domain/tests';
+import { generateTestPlan } from '../domain/tests';
 import { copyToClipboard, downloadJson } from '../utils/export';
-import type { SizingResult } from '../domain/types';
+import type { SizingResult, TestCase } from '../domain/types';
+import { getAgentArchetypes } from '../data/agentArchetypes';
+import { useRulesStore } from '../state/rulesStore';
 
 interface TestPlanViewProps {
   result: SizingResult;
 }
 
 export function TestPlanView({ result }: TestPlanViewProps) {
+  const { sizingThresholds, riskThresholds } = useRulesStore();
+  const agentArchetypes = getAgentArchetypes({ sizingThresholds, riskThresholds });
   const { cases, summary } = generateTestPlan(result);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -54,14 +58,25 @@ export function TestPlanView({ result }: TestPlanViewProps) {
       </div>
 
       <div className="grid gap-8">
-        {Object.entries(groupedCases).map(([agentType, tests]) => (
-          <div key={agentType} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/50">
-              <h4 className="font-semibold text-gray-900 dark:text-white">{agentType} Tests</h4>
-            </div>
-            <div className="divide-y divide-gray-100 dark:divide-slate-700">
-              {tests.map((test) => (
-                <div key={test.id} className="p-6 hover:bg-gray-50/30 dark:hover:bg-slate-700/30 transition-colors">
+        {Object.entries(groupedCases).map(([agentType, tests]) => {
+          const agent = result.agentArchitecture.find(a => a.type === agentType);
+          const archetype = agent ? agentArchetypes.find(a => a.id === agent.archetypeId) : null;
+
+          return (
+            <div key={agentType} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-gray-200 dark:border-slate-700 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-100 dark:border-slate-700 bg-gray-50/50 dark:bg-slate-900/50">
+                <div className="flex items-center gap-3">
+                  <h4 className="font-semibold text-gray-900 dark:text-white">{agentType} Tests</h4>
+                  {archetype && (
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 px-2 py-0.5 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-full">
+                      {archetype.tier === 'core' ? 'Core' : 'Extended'} – {archetype.name}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="divide-y divide-gray-100 dark:divide-slate-700">
+                {tests.map((test) => (
+                  <div key={test.id} className="p-6 hover:bg-gray-50/30 dark:hover:bg-slate-700/30 transition-colors">
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
@@ -103,7 +118,7 @@ export function TestPlanView({ result }: TestPlanViewProps) {
                         Edge Cases & Negative Tests
                       </span>
                       <ul className="mt-2 space-y-2">
-                        {test.edgeCases.map((ec, idx) => (
+                        {test.edgeCases.map((ec: string, idx: number) => (
                           <li key={idx} className="flex items-start gap-2 text-sm text-gray-600 dark:text-slate-300 bg-white dark:bg-slate-800 p-2 rounded border border-gray-100 dark:border-slate-700">
                             <ShieldAlert className="w-3.5 h-3.5 text-orange-400 mt-0.5 flex-shrink-0" />
                             <span>{ec}</span>
@@ -116,7 +131,8 @@ export function TestPlanView({ result }: TestPlanViewProps) {
               ))}
             </div>
           </div>
-        ))}
+        );
+        })}
       </div>
     </div>
   );
@@ -134,6 +150,6 @@ Expected Output:
 ${test.expectedOutput}
 
 Edge Cases:
-${test.edgeCases.map(ec => `- ${ec}`).join('\n')}
+${test.edgeCases.map((ec: string) => `- ${ec}`).join('\n')}
 `;
 }

@@ -1,11 +1,5 @@
 import type { SizingResult } from './types';
 
-export interface PromptDefinition {
-  role: string;
-  content: string;
-  variables: string[];
-}
-
 export interface TestPlanItem {
   category: string;
   testCase: string;
@@ -23,28 +17,6 @@ export interface DebuggerConfig {
   traceEnabled: boolean;
   logLevel: string;
   monitoredEvents: string[];
-}
-
-export function generatePrompts(result: SizingResult): PromptDefinition[] {
-  const prompts: PromptDefinition[] = [];
-
-  // System Prompt
-  prompts.push({
-    role: 'System',
-    content: `You are an AI assistant designed to help with ${result.tShirtSize} complexity tasks. Your primary goal is to assist users efficiently and accurately.`,
-    variables: ['user_context', 'history']
-  });
-
-  // Intent Classification Prompt
-  if (result.totalScore > 15) {
-    prompts.push({
-      role: 'Classifier',
-      content: `Analyze the user's input and classify the intent into one of the following categories: [Support, Sales, Info, Complaint].`,
-      variables: ['user_input']
-    });
-  }
-
-  return prompts;
 }
 
 export function generateTestPlan(result: SizingResult): TestPlanItem[] {

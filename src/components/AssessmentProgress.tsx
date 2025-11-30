@@ -26,13 +26,13 @@ export function AssessmentProgress() {
   return (
     <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-6">
       {/* Header with Title and Actions */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <div>
           <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-bold">
+            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-bold flex-shrink-0">
               {currentStep + 1}
             </span>
-            {currentDimension?.label}
+            <span className="truncate">{currentDimension?.label}</span>
           </h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 ml-8">
             Step {currentStep + 1} of {totalSteps}
@@ -43,7 +43,7 @@ export function AssessmentProgress() {
           <button
             onClick={() => setMode(mode === 'single' ? 'compare' : 'single')}
             className={cn(
-              "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all border shadow-sm whitespace-nowrap",
+              "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-bold transition-all border shadow-sm whitespace-nowrap w-fit ml-8 sm:ml-0",
               mode === 'compare'
                 ? "bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 hover:bg-purple-200 dark:hover:bg-purple-900"
                 : "bg-white dark:bg-slate-700 text-gray-600 dark:text-slate-300 border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 hover:text-gray-900 dark:hover:text-white"

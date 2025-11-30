@@ -1,5 +1,6 @@
 import { Rocket, Calendar, TrendingUp, Download, CheckCircle2, Clock, Star } from 'lucide-react';
 import { useActiveScenario } from '../state/sizingStore';
+import { useRulesStore } from '../state/rulesStore';
 import { calculateSizingResult } from '../domain/scoring';
 import { calculateMaturityResult } from '../domain/maturity';
 import { generateValueRoadmap, type Horizon } from '../domain/roadmap';
@@ -8,7 +9,8 @@ import { cn } from '../utils/cn';
 
 export function ValueRoadmapView() {
   const { scenario } = useActiveScenario();
-  const sizingResult = calculateSizingResult(scenario.scores);
+  const { sizingThresholds, riskThresholds } = useRulesStore();
+  const sizingResult = calculateSizingResult(scenario.scores, { sizingThresholds, riskThresholds });
   const maturityResult = calculateMaturityResult(scenario.maturityScores || {});
   const roadmap = generateValueRoadmap(sizingResult, maturityResult);
 
